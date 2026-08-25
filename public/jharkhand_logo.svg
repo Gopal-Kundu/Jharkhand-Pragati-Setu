@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="120" height="120">
+  <circle cx="60" cy="60" r="56" fill="#047857" stroke="#F59E0B" stroke-width="4"/>
+  <circle cx="60" cy="60" r="48" fill="#064e3b" />
+  <circle cx="60" cy="60" r="38" fill="#ffffff" />
+  <!-- Ashoka Chakra stylized -->
+  <circle cx="60" cy="60" r="16" fill="none" stroke="#1e3a8a" stroke-width="2.5"/>
+  <circle cx="60" cy="60" r="4" fill="#1e3a8a"/>
+  <!-- Palash flower & Elephant silhouette stylization -->
+  <path d="M60 28 L63 34 L70 35 L65 40 L66 47 L60 43 L54 47 L55 40 L50 35 L57 34 Z" fill="#F59E0B"/>
+  <text x="60" y="86" font-size="8" font-weight="bold" text-anchor="middle" fill="#065f46" font-family="sans-serif">JHARKHAND</text>
+  <text x="60" y="96" font-size="6.5" font-weight="600" text-anchor="middle" fill="#78350f" font-family="sans-serif">PRAGATI SETU</text>
+</svg>
