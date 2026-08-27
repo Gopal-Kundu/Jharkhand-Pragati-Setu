@@ -61,6 +61,18 @@ export const problemApi = {
   validateSolution: async (problemId, validationData) => {
     const res = await apiClient.patch(`/problems/${problemId}/validate`, validationData);
     return res.data;
+  },
+
+  // Government tripartite sanction approval / decline
+  approveTripartiteProposal: async (proposalId, approvalData) => {
+    const res = await apiClient.patch(`/problems/proposals/${proposalId}/govt-approve`, approvalData);
+    return res.data;
+  },
+
+  // Get all tripartite proposals forwarded for Government sanction
+  getTripartiteProposalsForGovt: async () => {
+    const res = await apiClient.get('/problems/proposals/tripartite-packages');
+    return res.data;
   }
 };
 

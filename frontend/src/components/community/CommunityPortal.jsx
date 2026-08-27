@@ -125,10 +125,10 @@ export default function CommunityPortal() {
 
   // User notifications & unread badge count
   const [notifications, setNotifications] = useState([]);
-  const [unreadCount, setUnreadCount] = useState(3);
+  const [unreadCount, setUnreadCount] = useState(0);
   const [isNotificationsModalOpen, setIsNotificationsModalOpen] = useState(false);
 
-  // Form State conforming to Problem Schema (Domain decided automatically by Gemini AI)
+  // Form State conforming to Problem Schema (Domain decided automatically by AI)
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -180,7 +180,7 @@ export default function CommunityPortal() {
       loadUserNotifications();
     } else {
       setMyProblems([]);
-      setUnreadCount(3);
+      setUnreadCount(0);
     }
   }, [isAuthenticated, authUser]);
 
@@ -249,7 +249,7 @@ export default function CommunityPortal() {
       const submissionData = new FormData();
       submissionData.append('title', formData.title);
       submissionData.append('description', formData.description);
-      // Note: Domain is not sent manually; Gemini AI analyzes and classifies the domain in backend
+      // Note: Domain is not sent manually; AI analyzes and classifies the domain in backend
 
       const locationObj = {
         district: formData.district,
@@ -284,7 +284,7 @@ export default function CommunityPortal() {
       const newTicketId = newProblem.ticketId || 'JH-SOC-1042';
       const decidedDomain = newProblem.domain || 'Innovation Intervention';
 
-      toast.success(`Problem reported! AI classified into '${decidedDomain}' (Ticket: #${newTicketId})`);
+      toast.success(`Problem reported!`);
       
       // Add directly to user's problems list
       setMyProblems(prev => [newProblem, ...prev]);
@@ -400,7 +400,7 @@ export default function CommunityPortal() {
 
             {/* Description */}
             <div className="space-y-1.5">
-              <label className="block text-xs font-bold text-slate-700">Problem Description & Ground Reality *</label>
+              <label className="block text-xs font-bold text-slate-700">Problem Description </label>
               <textarea
                 required
                 rows={4}

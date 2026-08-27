@@ -2,7 +2,7 @@ import Problem from '../models/Problem.js';
 import University from '../models/University.js';
 import User from '../models/User.js';
 import Location from '../models/Location.js';
-import { analyzeAndClassifyProblem, checkProblemDuplicateInLocation } from '../ai/geminiService.js';
+import { analyzeAndClassifyProblem, checkProblemDuplicateInLocation } from '../ai/aiService.js';
 import { uploadMediaToCloudinary } from '../cloudinary/upload.js';
 import { sendProblemSubmittedEmail, sendUniversityAllocationEmail } from '../email/emailService.js';
 
@@ -93,7 +93,7 @@ export const createProblem = async (req, res) => {
       }
     }
 
-    // 3. Gemini AI Autonomous Domain Classification & Problem Analysis
+    // 3. AI Autonomous Domain Classification & Problem Analysis
     const aiAnalysisResult = await analyzeAndClassifyProblem(title, description, parsedLocation);
     const decidedDomain = aiAnalysisResult.domain || 'Water Resources';
 
@@ -175,7 +175,7 @@ export const createProblem = async (req, res) => {
           officer: parsedSubmitter.name || 'Citizen / Local Body',
           role: parsedSubmitter.role || 'citizen',
           action: 'Problem Statement Registered (AI Domain Decided)',
-          note: `Classified into '${decidedDomain}' by Gemini AI with ${evidenceList.length} evidence attachments from ${parsedLocation.district || 'Jharkhand'}`
+          note: `Classified into '${decidedDomain}' by AI with ${evidenceList.length} evidence attachments from ${parsedLocation.district || 'Jharkhand'}`
         }
       ]
     });
@@ -200,11 +200,12 @@ export const createProblem = async (req, res) => {
       console.warn('[Location Save Warning]:', locErr.message);
     }
 
-    // 7. University Matching & Notification Dispatch
+    // 7. University Matching & Notification Dispatch based on availableDomains
     try {
       const disciplineRegexes = (aiAnalysisResult.recommendedDisciplines || []).map(d => new RegExp(d, 'i'));
       const matchedUniversities = await University.find({
         $or: [
+          { availableDomains: decidedDomain },
           { academicDisciplines: { $in: disciplineRegexes } },
           { academicDisciplines: new RegExp(decidedDomain, 'i') },
           { researchCentres: new RegExp(decidedDomain, 'i') }
@@ -247,7 +248,7 @@ export const createProblem = async (req, res) => {
             notifications: {
               $each: [{
                 title: `Challenge Logged: ${decidedDomain} (#${ticketId})`,
-                message: `Your challenge '${title}' was analyzed by Gemini AI and classified as '${decidedDomain}'. Sent for University R&D matching.`,
+                message: `Your challenge '${title}' was analyzed by AI and classified as '${decidedDomain}'. Sent for University R&D matching.`,
                 ticketId,
                 type: 'status_update',
                 read: false,
@@ -861,6 +862,281 @@ export const getNearbyProblems = async (req, res) => {
   }
 };
 
+/**
+ * @desc    Government reviews and sanctions a tripartite partnership proposal
+ * @route   PATCH /api/problems/proposals/:proposalId/govt-approve
+ * @access  Private (Government / Admin)
+ */
+export const approveTripartiteProposal = async (req, res) => {
+  try {
+    const { proposalId } = req.params;
+    const { action = 'approve', remarks = '', sanctionOrderNumber = '' } = req.body;
+
+    const ProposalModel = (await import('../models/Proposal.js')).default;
+    const proposal = await ProposalModel.findById(proposalId)
+      .populate('problem')
+      .populate('university')
+      .populate('industryOffer.industry');
+
+    if (!proposal) {
+      return res.status(404).json({ success: false, message: 'Proposal not found' });
+    }
+
+    const problem = await Problem.findById(proposal.problem._id);
+    if (!problem) {
+      return res.status(404).json({ success: false, message: 'Associated problem not found' });
+    }
+
+    if (action === 'approve') {
+      const generatedSanction = sanctionOrderNumber || `JH-SANCTION-${Date.now().toString().slice(-6)}`;
+      proposal.status = 'approved_by_govt';
+      proposal.govtApproval = {
+        approvedBy: req.user?._id || null,
+        status: 'approved',
+        remarks: remarks || 'Tripartite Project sanctioned and approved by Government Authority.',
+        sanctionOrderNumber: generatedSanction,
+        approvedAt: new Date()
+      };
+      await proposal.save();
+
+      // Update Problem status & allocation
+      problem.status = 'in_progress';
+      if (proposal.university) {
+        problem.allocatedUniversity = {
+          universityId: proposal.university._id.toString(),
+          name: proposal.university.name,
+          facultyLead: proposal.facultyMembers?.[0] || { name: 'Lead PI' }
+        };
+      }
+      if (proposal.industryOffer?.industry) {
+        const ind = proposal.industryOffer.industry;
+        problem.industryPartners = [
+          {
+            partnerId: ind._id.toString(),
+            name: ind.name,
+            grantAmount: proposal.industryOffer.fundingAmount || 500000,
+            mentorName: proposal.industryOffer.mentorName || 'Corporate Mentor',
+            committedResources: proposal.industryOffer.equipmentProvided || []
+          }
+        ];
+      }
+
+      // Initialize milestones if empty
+      if (!problem.milestones || problem.milestones.length === 0) {
+        problem.milestones = [
+          { id: 'M1', title: 'Multidisciplinary laboratory simulation & design verification', progress: 100, status: 'completed', targetDate: 'Month 1', completionDate: new Date().toLocaleDateString() },
+          { id: 'M2', title: 'Hardware-Software MVP prototyping & lab calibration', progress: 50, status: 'in_progress', targetDate: 'Month 3' },
+          { id: 'M3', title: 'Field trial pilot deployment at local community site', progress: 0, status: 'pending', targetDate: 'Month 5' },
+          { id: 'M4', title: 'Stakeholder validation & measurable social impact assessment', progress: 0, status: 'pending', targetDate: 'Month 6' }
+        ];
+      }
+
+      // Append to Problem Timeline and Audit History for Citizen visibility
+      if (!Array.isArray(problem.timeline)) problem.timeline = [];
+      if (!Array.isArray(problem.auditHistory)) problem.auditHistory = [];
+
+      const sanctionEntry = {
+        timestamp: new Date(),
+        officer: req.user?.name || 'Govt Secretary / Triage Officer',
+        role: 'government',
+        action: 'Tripartite Partnership Sanctioned by Government',
+        note: `Government approved research implementation by ${proposal.university?.name || 'HEI'} with CSR co-sponsorship from ${proposal.industryOffer?.industry?.name || 'Industry Sponsor'} (Sanction: ${generatedSanction}).`
+      };
+
+      problem.timeline.push(sanctionEntry);
+      problem.auditHistory.unshift(sanctionEntry);
+
+      await problem.save();
+
+      // Notify University
+      if (proposal.university) {
+        const UniversityModel = (await import('../models/University.js')).default;
+        await UniversityModel.findByIdAndUpdate(proposal.university._id, {
+          $push: {
+            notifications: {
+              $each: [{
+                proposalId: proposal._id,
+                problemId: problem._id,
+                title: `Project Sanction Approved by Government! (#${problem.ticketId})`,
+                message: `Government has approved and sanctioned the tripartite project with ${proposal.industryOffer?.industry?.name || 'Industry Sponsor'}. Implementation is now active.`,
+                domain: problem.domain,
+                read: false,
+                createdAt: new Date()
+              }],
+              $position: 0
+            }
+          }
+        });
+      }
+
+      // Notify Industry
+      if (proposal.industryOffer?.industry) {
+        const IndustryModel = (await import('../models/IndustryPartner.js')).default;
+        await IndustryModel.findByIdAndUpdate(proposal.industryOffer.industry._id, {
+          $push: {
+            notifications: {
+              $each: [{
+                proposalId: proposal._id,
+                problemId: problem._id,
+                title: `Govt Sanction Order Issued for Co-Sponsorship (#${problem.ticketId})`,
+                message: `Tripartite project with ${proposal.university?.name || 'University'} has been sanctioned by Government under Section 135 CSR mandate.`,
+                domain: problem.domain,
+                read: false,
+                createdAt: new Date()
+              }],
+              $position: 0
+            }
+          }
+        });
+      }
+
+      // Notify Submitter Citizen
+      if (problem.user) {
+        const UserModel = (await import('../models/User.js')).default;
+        await UserModel.findByIdAndUpdate(problem.user, {
+          $push: {
+            notifications: {
+              $each: [{
+                title: `Your Challenge is Now In Progress! (#${problem.ticketId})`,
+                message: `Your challenge '${problem.title}' has been matched with ${proposal.university?.name || 'University'} and co-sponsored by ${proposal.industryOffer?.industry?.name || 'Industry Partner'}.`,
+                ticketId: problem.ticketId,
+                type: 'status_update',
+                read: false,
+                createdAt: new Date()
+              }],
+              $position: 0
+            }
+          }
+        });
+      }
+
+      return res.status(200).json({
+        success: true,
+        message: 'Tripartite project approved and sanctioned by Government!',
+        problem,
+        proposal
+      });
+    } else {
+      proposal.status = 'rejected_by_govt';
+      proposal.govtApproval = {
+        approvedBy: req.user?._id || null,
+        status: 'rejected',
+        remarks: remarks || 'Declined by Government Review Committee',
+        approvedAt: new Date()
+      };
+      await proposal.save();
+
+      // Append to Problem timeline and auditHistory
+      if (!Array.isArray(problem.timeline)) problem.timeline = [];
+      if (!Array.isArray(problem.auditHistory)) problem.auditHistory = [];
+
+      const declineEntry = {
+        timestamp: new Date(),
+        officer: req.user?.name || 'Govt Secretary / Review Committee',
+        role: 'government',
+        action: 'Tripartite Proposal Declined by Government',
+        note: `Government review committee declined the proposal from ${proposal.university?.name || 'HEI'}. Remarks: ${remarks || 'Review committee decision'}`
+      };
+
+      problem.timeline.push(declineEntry);
+      problem.auditHistory.unshift(declineEntry);
+
+      await problem.save();
+
+      // Notify University
+      if (proposal.university) {
+        const UniversityModel = (await import('../models/University.js')).default;
+        await UniversityModel.findByIdAndUpdate(proposal.university._id, {
+          $push: {
+            notifications: {
+              $each: [{
+                proposalId: proposal._id,
+                problemId: problem._id,
+                title: `Proposal Review Decision: Declined (#${problem.ticketId})`,
+                message: `Government has declined the tripartite proposal for '${problem.title}'. Reason: ${remarks || 'Administrative review committee decision'}`,
+                domain: problem.domain,
+                read: false,
+                createdAt: new Date()
+              }],
+              $position: 0
+            }
+          }
+        });
+      }
+
+      // Notify Industry
+      if (proposal.industryOffer?.industry) {
+        const IndustryModel = (await import('../models/IndustryPartner.js')).default;
+        await IndustryModel.findByIdAndUpdate(proposal.industryOffer.industry._id, {
+          $push: {
+            notifications: {
+              $each: [{
+                proposalId: proposal._id,
+                problemId: problem._id,
+                title: `Govt Sanction Update: Proposal Declined (#${problem.ticketId})`,
+                message: `Government has declined the tripartite project proposal for challenge #${problem.ticketId}. Reason: ${remarks || 'Administrative review committee decision'}`,
+                domain: problem.domain,
+                read: false,
+                createdAt: new Date()
+              }],
+              $position: 0
+            }
+          }
+        });
+      }
+
+      return res.status(200).json({
+        success: true,
+        message: 'Proposal declined by Government',
+        proposal
+      });
+    }
+  } catch (error) {
+    console.error('[Approve Tripartite Proposal Error]:', error);
+    return res.status(500).json({
+      success: false,
+      message: error.message || 'Server error approving proposal'
+    });
+  }
+};
+
+/**
+ * @desc    Get all tripartite proposals forwarded for Government sanction
+ * @route   GET /api/problems/proposals/tripartite-packages
+ * @access  Private (Government / Admin)
+ */
+export const getTripartiteProposalsForGovt = async (req, res) => {
+  try {
+    const ProposalModel = (await import('../models/Proposal.js')).default;
+    const proposals = await ProposalModel.find()
+      .populate({
+        path: 'problem',
+        select: 'ticketId title description domain location evidence status priority resolutionStatus timeline submitter createdAt'
+      })
+      .populate({
+        path: 'university',
+        select: 'name shortName location type contactEmail availableDomains academicDisciplines facultySpecializations facultyMembers'
+      })
+      .populate({
+        path: 'industryOffer.industry',
+        select: 'name type hqLocation contactEmail availableDomains supportCapabilities csrAnnualBudgetInr leadMentors'
+      })
+      .sort({ createdAt: -1 });
+
+    return res.status(200).json({
+      success: true,
+      count: proposals.length,
+      proposals
+    });
+  } catch (error) {
+    console.error('[Get Tripartite Proposals For Govt Error]:', error);
+    return res.status(500).json({
+      success: false,
+      message: error.message || 'Server error fetching tripartite proposals'
+    });
+  }
+};
+
 export default {
   createProblem,
   getProblems,
@@ -871,5 +1147,7 @@ export default {
   updateMilestone,
   validateSolution,
   getMapLocations,
-  getNearbyProblems
+  getNearbyProblems,
+  approveTripartiteProposal,
+  getTripartiteProposalsForGovt
 };

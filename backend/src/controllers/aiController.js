@@ -20,11 +20,11 @@ export const SIH_DOMAINS = [
 ];
 
 /**
- * Initialize Gemini AI client using API key from .env
+ * Initialize AI client using API key from .env
  */
-const getGeminiClient = () => {
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey || apiKey.includes('YOUR_GEMINI_API_KEY')) {
+const getAIClient = () => {
+  const apiKey = process.env.AI_API_KEY || process.env.GEMINI_API_KEY;
+  if (!apiKey || apiKey.includes('YOUR_API_KEY')) {
     return null;
   }
   return new GoogleGenerativeAI(apiKey);
@@ -161,14 +161,14 @@ export const categorizeProblem = async (req, res) => {
     // 2. Fetch Universities to rank match scores
     const universities = await University.find({});
 
-    // 3. AI Categorization using Gemini 3.1 Flash Lite (or configured model)
-    const gemini = getGeminiClient();
-    const modelName = process.env.GEMINI_MODEL || 'gemini-3.1-flash-lite';
+    // 3. AI Categorization
+    const aiClient = getAIClient();
+    const modelName = process.env.AI_MODEL || process.env.GEMINI_MODEL || 'gemini-2.0-flash';
     let aiResult = null;
 
-    if (gemini) {
+    if (aiClient) {
       try {
-        const model = gemini.getGenerativeModel({ model: modelName });
+        const model = aiClient.getGenerativeModel({ model: modelName });
         const prompt = `
           You are the Chief AI Triage Engine for the Smart India Hackathon (SIH 2026) Societal Problem-to-Innovation Ecosystem.
           Analyze this citizen/community societal challenge statement and output a STRICT valid JSON object:
@@ -200,12 +200,12 @@ export const categorizeProblem = async (req, res) => {
         if (jsonMatch) {
           aiResult = JSON.parse(jsonMatch[0]);
         }
-      } catch (geminiError) {
-        console.warn(`[Gemini AI (${modelName}) Warning]:`, geminiError.message);
+      } catch (aiError) {
+        console.warn(`[AI Engine (${modelName}) Warning]:`, aiError.message);
       }
     }
 
-    // Fallback to deterministic high-accuracy classifier if Gemini didn't return valid JSON
+    // Fallback to deterministic high-accuracy classifier if AI didn't return valid JSON
     if (!aiResult) {
       aiResult = heuristicClassification(title, description, location);
     }
@@ -293,14 +293,14 @@ export const aiChat = async (req, res) => {
       });
     }
 
-    const gemini = getGeminiClient();
-    const modelName = process.env.GEMINI_MODEL || 'gemini-3.1-flash-lite';
+    const aiClient = getAIClient();
+    const modelName = process.env.AI_MODEL || process.env.GEMINI_MODEL || 'gemini-2.0-flash';
 
     let reply = '';
 
-    if (gemini) {
+    if (aiClient) {
       try {
-        const model = gemini.getGenerativeModel({ model: modelName });
+        const model = aiClient.getGenerativeModel({ model: modelName });
         const systemPrompt = `
           You are "Pragati AI", the intelligent orchestrator of the Smart India Hackathon (SIH 2026) Societal Problem-to-Innovation Ecosystem in Jharkhand.
           The user has the role: "${contextRole || 'citizen'}".
@@ -313,7 +313,7 @@ export const aiChat = async (req, res) => {
         const result = await model.generateContent(`${systemPrompt}\n\nUser Question: ${message}`);
         reply = result.response.text();
       } catch (err) {
-        console.warn(`[Gemini Chat (${modelName}) Warning]:`, err.message);
+        console.warn(`[AI Chat (${modelName}) Warning]:`, err.message);
       }
     }
 

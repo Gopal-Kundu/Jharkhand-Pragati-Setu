@@ -208,6 +208,15 @@ const problemSchema = new mongoose.Schema(
         action: { type: String, required: true },
         note: { type: String, default: '' }
       }
+    ],
+    timeline: [
+      {
+        timestamp: { type: Date, default: Date.now },
+        officer: { type: String, default: 'System' },
+        role: { type: String, default: 'ai_engine' },
+        action: { type: String, required: true },
+        note: { type: String, default: '' }
+      }
     ]
   },
   {

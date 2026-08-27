@@ -75,6 +75,10 @@ const proposalSchema = new mongoose.Schema(
         default: 'IoT & Embedded Sensors'
       }
     ],
+    domain: {
+      type: String,
+      default: 'Water Resources'
+    },
     assignedIndustry: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'IndustryPartner',
@@ -85,9 +89,40 @@ const proposalSchema = new mongoose.Schema(
       ref: 'IndustryPartner',
       default: null
     },
+    industryOffer: {
+      industry: { type: mongoose.Schema.Types.ObjectId, ref: 'IndustryPartner', default: null },
+      fundingAmount: { type: Number, default: 0 },
+      supportDetails: { type: String, default: '' },
+      equipmentProvided: [String],
+      mentorName: { type: String, default: '' },
+      mentorDesignation: { type: String, default: '' },
+      mentorEmail: { type: String, default: '' },
+      offeredAt: { type: Date, default: null },
+      responseStatus: { type: String, enum: ['pending', 'accepted', 'rejected'], default: 'pending' },
+      responseNote: { type: String, default: '' },
+      respondedAt: { type: Date, default: null }
+    },
+    govtApproval: {
+      approvedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
+      status: { type: String, enum: ['pending', 'approved', 'rejected'], default: 'pending' },
+      remarks: { type: String, default: '' },
+      sanctionOrderNumber: { type: String, default: '' },
+      approvedAt: { type: Date, default: null }
+    },
     status: {
       type: String,
-      enum: ['submitted', 'ai_triaged', 'industry_matched', 'industry_funded', 'in_progress', 'completed'],
+      enum: [
+        'submitted',
+        'ai_triaged',
+        'offered_by_industry',
+        'accepted_by_university',
+        'rejected_by_university',
+        'submitted_to_govt',
+        'approved_by_govt',
+        'rejected_by_govt',
+        'in_progress',
+        'completed'
+      ],
       default: 'submitted'
     },
     aiAnalysis: {

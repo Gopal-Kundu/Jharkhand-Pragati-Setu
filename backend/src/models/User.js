@@ -59,15 +59,10 @@ const userSchema = new mongoose.Schema(
       ref: 'University',
       default: null
     },
-    institutionDetails: {
-      disciplines: [String],
-      incubationCenter: String,
-      facultyLead: String
-    },
-    industryDetails: {
-      partnerType: String,
-      csrBudget: Number,
-      focusDomains: [String]
+    industry: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'IndustryPartner',
+      default: null
     },
     notifications: [
       {

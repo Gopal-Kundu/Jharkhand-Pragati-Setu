@@ -28,7 +28,12 @@ import {
   FileCheck,
   Footprints,
   Loader2,
-  ExternalLink
+  ExternalLink,
+  Play,
+  Video,
+  Film,
+  Image as ImageIcon,
+  Clock
 } from 'lucide-react';
 
 const DOMAIN_ICONS = {
@@ -71,6 +76,29 @@ export default function ProblemDetailsModal({ problemId, onClose }) {
   const [problem, setProblem] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [activeMediaIndex, setActiveMediaIndex] = useState(0);
+
+  // Helper to detect if an evidence object/URL is a video
+  const isVideoMedia = (ev) => {
+    if (!ev) return false;
+    const url = typeof ev === 'string' ? ev : ev.url || '';
+    const type = typeof ev === 'object' ? ev.type || ev.resource_type || '' : '';
+    const format = typeof ev === 'object' ? ev.format || '' : '';
+    return (
+      type === 'video' ||
+      format === 'mp4' ||
+      format === 'webm' ||
+      format === 'mov' ||
+      format === 'mkv' ||
+      url.endsWith('.mp4') ||
+      url.endsWith('.webm') ||
+      url.endsWith('.mov') ||
+      url.endsWith('.mkv') ||
+      url.includes('/video/') ||
+      url.includes('.mp4') ||
+      url.startsWith('blob:')
+    );
+  };
 
   // Fetch individual problem statement by ID/Ticket on demand via dedicated REST API
   useEffect(() => {
@@ -110,22 +138,22 @@ export default function ProblemDetailsModal({ problemId, onClose }) {
   const proposal = problem?.proposals?.[0];
   const industryPartner = problem?.industryPartners?.[0];
 
-  const facultyLeadName = getSafeString(problem?.allocatedUniversity?.facultyLead, 'Lead Investigator');
-  const facultyLeadDept = problem?.allocatedUniversity?.facultyLead?.department 
-    ? ` (${problem.allocatedUniversity.facultyLead.department})` 
+  const facultyLeadName = getSafeString(problem?.allocatedUniversity?.facultyLead, 'pending');
+  const facultyLeadDept = problem?.allocatedUniversity?.facultyLead?.department
+    ? ` (${problem.allocatedUniversity.facultyLead.department})`
     : '';
 
   const submitterName = getSafeString(problem?.submitter?.name, 'Concerned Citizen');
-  const mentorName = getSafeString(industryPartner?.mentorName, 'Corporate Technical Lead');
+  const mentorName = getSafeString(industryPartner?.mentorName, 'Pending');
   const studentLeadName = getSafeString(proposal?.team?.studentLead, 'Student Lead');
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-slate-900/70 backdrop-blur-sm animate-in fade-in overflow-y-auto">
-      <div 
+      <div
         className="relative w-full max-w-4xl bg-white rounded-3xl border border-slate-200 shadow-2xl overflow-hidden my-8 max-h-[90vh] flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
-        
+
         {/* Header */}
         <div className="flex items-center justify-between p-5 sm:p-6 border-b border-slate-100 bg-slate-50/80">
           <div className="flex items-center space-x-3">
@@ -165,7 +193,7 @@ export default function ProblemDetailsModal({ problemId, onClose }) {
           ) : error ? (
             <div className="p-6 rounded-2xl bg-rose-50 border border-rose-200 text-rose-800 text-center space-y-2">
               <p className="font-bold">{error}</p>
-              <button 
+              <button
                 onClick={onClose}
                 className="px-4 py-2 rounded-xl bg-rose-600 text-white font-bold text-xs"
               >
@@ -205,27 +233,117 @@ export default function ProblemDetailsModal({ problemId, onClose }) {
                 </div>
               </div>
 
-              {/* Evidence Media Banner (Photo & Video Support) */}
-              {problem.evidence && problem.evidence.length > 0 && (
-                <div className="rounded-3xl overflow-hidden border border-slate-200 shadow-md bg-slate-900 relative">
-                  {problem.evidence[0].type === 'video' || problem.evidence[0].url?.endsWith('.mp4') || problem.evidence[0].url?.includes('/video/') ? (
-                    <video
-                      src={problem.evidence[0].url}
-                      controls
-                      className="w-full max-h-96 object-contain bg-black"
-                    />
-                  ) : (
-                    <img
-                      src={problem.evidence[0].url}
-                      alt={problem.title}
-                      className="w-full h-72 sm:h-96 object-cover object-center"
-                    />
-                  )}
-                  <div className="absolute bottom-3 left-3 bg-black/60 backdrop-blur-md px-3.5 py-1.5 rounded-xl text-white text-xs font-semibold border border-white/20">
-                    {problem.evidence[0].caption || (problem.evidence[0].type === 'video' ? 'Ground Site Video Clip' : 'Ground Site Photo')}
+              {/* Evidence Media Showcase (Photo & Full Video Player Support) */}
+              {problem.evidence && problem.evidence.length > 0 && (() => {
+                const currentEvidence = problem.evidence[activeMediaIndex] || problem.evidence[0];
+                const currentUrl = typeof currentEvidence === 'string' ? currentEvidence : currentEvidence?.url;
+                const isVideo = isVideoMedia(currentEvidence);
+
+                return (
+                  <div className="space-y-3">
+                    <div className="rounded-3xl overflow-hidden border border-slate-200 shadow-md bg-slate-950 relative">
+                      {isVideo ? (
+                        <div className="w-full bg-black flex flex-col items-center justify-center">
+                          <video
+                            key={currentUrl}
+                            src={currentUrl}
+                            controls
+                            playsInline
+                            preload="metadata"
+                            className="w-full max-h-[440px] object-contain bg-black"
+                          >
+                            Your browser does not support HTML5 video streaming.
+                          </video>
+                          <div className="w-full px-4 py-2.5 bg-slate-900 text-white flex items-center justify-between text-xs border-t border-slate-800">
+                            <div className="flex items-center space-x-2">
+                              <span className="bg-indigo-600 px-2 py-0.5 rounded font-bold uppercase text-[10px] flex items-center space-x-1">
+                                <Play className="w-2.5 h-2.5 fill-current text-white" />
+                                <span>Video Evidence</span>
+                              </span>
+                              <span className="font-medium text-slate-300">
+                                {currentEvidence.caption || currentEvidence.name || `Ground Site Video Recording #${activeMediaIndex + 1}`}
+                              </span>
+                            </div>
+                            <a
+                              href={currentUrl}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="text-indigo-400 hover:text-indigo-200 flex items-center space-x-1 underline font-medium"
+                            >
+                              <span>Open in New Tab</span>
+                              <ExternalLink className="w-3 h-3" />
+                            </a>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="relative">
+                          <img
+                            src={currentUrl}
+                            alt={problem.title}
+                            className="w-full h-72 sm:h-96 object-cover object-center"
+                          />
+                          <div className="absolute bottom-3 left-3 bg-black/60 backdrop-blur-md px-3.5 py-1.5 rounded-xl text-white text-xs font-semibold border border-white/20">
+                            {currentEvidence.caption || `Ground Site Photo #${activeMediaIndex + 1}`}
+                          </div>
+                          <a
+                            href={currentUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="absolute top-3 right-3 bg-black/60 hover:bg-black/90 backdrop-blur-md text-white p-2 rounded-xl text-xs border border-white/20 transition-all cursor-pointer"
+                            title="View Full Resolution"
+                          >
+                            <ExternalLink className="w-3.5 h-3.5" />
+                          </a>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Multi-Evidence Thumbnail Selector Strip */}
+                    {problem.evidence.length > 1 && (
+                      <div className="space-y-1.5">
+                        <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">
+                          All Uploaded Evidence Media ({problem.evidence.length} files):
+                        </span>
+                        <div className="flex items-center space-x-2 overflow-x-auto pb-1">
+                          {problem.evidence.map((evItem, idx) => {
+                            const evItemUrl = typeof evItem === 'string' ? evItem : evItem?.url;
+                            const evIsVideo = isVideoMedia(evItem);
+                            const isSelected = idx === activeMediaIndex;
+
+                            return (
+                              <button
+                                key={idx}
+                                type="button"
+                                onClick={() => setActiveMediaIndex(idx)}
+                                className={`relative flex-shrink-0 w-24 h-16 rounded-xl overflow-hidden border-2 transition-all cursor-pointer ${
+                                  isSelected
+                                    ? 'border-emerald-600 ring-2 ring-emerald-500/30 scale-105'
+                                    : 'border-slate-200 hover:border-slate-400 opacity-70 hover:opacity-100'
+                                }`}
+                              >
+                                {evIsVideo ? (
+                                  <div className="w-full h-full bg-slate-900 flex items-center justify-center text-white">
+                                    <Play className="w-5 h-5 fill-current text-white" />
+                                  </div>
+                                ) : (
+                                  <img
+                                    src={evItemUrl}
+                                    alt={`Thumbnail ${idx + 1}`}
+                                    className="w-full h-full object-cover"
+                                  />
+                                )}
+                                <span className="absolute bottom-1 right-1 bg-black/80 text-white text-[8px] font-bold px-1 rounded">
+                                  {evIsVideo ? 'VIDEO' : 'PHOTO'}
+                                </span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
                   </div>
-                </div>
-              )}
+                );
+              })()}
 
               {/* Problem Description & Context */}
               <div className="p-6 rounded-3xl bg-slate-50 border border-slate-200/80 space-y-3">
@@ -262,14 +380,14 @@ export default function ProblemDetailsModal({ problemId, onClose }) {
 
               {/* Multidisciplinary Collaboration Details: University & Industry CSR */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                
+
                 {/* 1. University R&D Team */}
                 <div className="p-6 rounded-3xl bg-white border border-slate-200 shadow-sm space-y-4">
                   <div className="flex items-center space-x-2 text-xs font-bold font-mono text-purple-800 uppercase tracking-wider">
                     <GraduationCap className="w-4 h-4 text-purple-600" />
                     <span>Allocated Higher Education Institution</span>
                   </div>
-                  
+
                   <div>
                     <h4 className="font-extrabold text-base text-slate-900 font-heading">
                       {getSafeString(problem.allocatedUniversity?.name, 'Higher Education Lab')}
@@ -312,53 +430,44 @@ export default function ProblemDetailsModal({ problemId, onClose }) {
                     <div>
                       <div className="text-[11px] text-slate-500 font-medium">CSR Grant Disbursed</div>
                       <div className="text-xl font-black text-amber-900 font-heading">
-                        {industryPartner?.grantAmount ? `₹${(industryPartner.grantAmount / 100000).toFixed(1)} Lakhs` : 'Grant Committed'}
+                        {industryPartner?.grantAmount ? `₹${(industryPartner.grantAmount / 100000).toFixed(1)} Lakhs` : 'Pending'}
                       </div>
                     </div>
-                    
+
                   </div>
                 </div>
 
               </div>
 
-              {/* Milestone Lifecycle Progress */}
-              {problem.milestones && problem.milestones.length > 0 && (
-                <div className="p-6 rounded-3xl bg-white border border-slate-200 space-y-4">
+              {/* Problem Audit & Innovation Tracking Timeline */}
+              {problem.timeline && problem.timeline.length > 0 && (
+                <div className="p-6 rounded-3xl bg-white border border-slate-200 space-y-4 shadow-sm">
                   <div className="flex items-center space-x-2 text-xs font-bold font-mono text-slate-600 uppercase tracking-wider">
-                    <Layers className="w-4 h-4 text-emerald-600" />
-                    <span>Project Progress</span>
+                    <Clock className="w-4 h-4 text-emerald-600" />
+                    <span>Milestone &amp; Partnership Timeline ({problem.timeline.length} events)</span>
                   </div>
 
-                  <div className="space-y-3">
-                    {problem.milestones.map((m, idx) => (
-                      <div 
-                        key={idx}
-                        className="p-4 rounded-2xl border border-slate-200/80 bg-slate-50/60 flex flex-col sm:flex-row sm:items-center justify-between gap-2"
-                      >
-                        <div className="space-y-1">
-                          <div className="flex items-center space-x-2">
-                            <span className="font-mono text-xs font-bold text-slate-400">0{idx + 1}.</span>
-                            <span className="font-bold text-sm text-slate-900">{m.title}</span>
-                          </div>
-                          {m.deliverable && (
-                            <p className="text-xs text-slate-600 pl-6">{m.deliverable}</p>
-                          )}
+                  <div className="relative pl-6 space-y-4 border-l-2 border-slate-200 ml-2">
+                    {problem.timeline.map((event, tIdx) => (
+                      <div key={tIdx} className="relative space-y-1">
+                        <div className="absolute -left-[31px] top-1 w-3.5 h-3.5 rounded-full bg-emerald-600 ring-4 ring-emerald-100" />
+                        <div className="flex flex-wrap items-center justify-between gap-1 text-xs">
+                          <span className="font-bold text-slate-900">{event.action}</span>
+                          <span className="text-[10px] text-slate-400 font-mono">
+                            {event.timestamp ? new Date(event.timestamp).toLocaleDateString() : 'Active'}
+                          </span>
                         </div>
-
-                        <span className={`self-start sm:self-auto text-xs font-bold px-3 py-1 rounded-full border ${
-                          m.status === 'completed' 
-                            ? 'bg-emerald-100 text-emerald-800 border-emerald-200' 
-                            : 'bg-amber-100 text-amber-800 border-amber-200'
-                        }`}>
-                          {m.status === 'completed' ? '✓ Completed' : m.status}
-                        </span>
+                        <p className="text-xs text-slate-600 leading-relaxed">{event.note}</p>
+                        {event.officer && (
+                          <span className="text-[10.5px] font-medium text-slate-500 block">
+                            Logged by: <strong>{event.officer}</strong> {event.role ? `(${event.role.toUpperCase()})` : ''}
+                          </span>
+                        )}
                       </div>
                     ))}
                   </div>
                 </div>
               )}
-
-              
 
             </>
           )}

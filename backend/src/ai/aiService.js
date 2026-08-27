@@ -16,15 +16,15 @@ const CANONICAL_DOMAINS = [
   'Rural Livelihoods'
 ];
 
-const apiKey = process.env.GEMINI_API_KEY || 'ssndisdjsodjos';
-const configuredModelName = process.env.GEMINI_MODEL || 'gemini-2.0-flash';
+const apiKey = process.env.AI_API_KEY || process.env.GEMINI_API_KEY || '';
+const configuredModelName = process.env.AI_MODEL || process.env.GEMINI_MODEL || 'gemini-2.0-flash';
 
 let genAI = null;
 if (apiKey) {
   try {
     genAI = new GoogleGenerativeAI(apiKey);
   } catch (err) {
-    console.warn('[Gemini Init Warning]:', err.message);
+    console.warn('[AI Init Warning]:', err.message);
   }
 }
 
@@ -33,7 +33,6 @@ if (apiKey) {
  */
 const getGenerativeModel = () => {
   if (!genAI) return null;
-  // Try configured model, fallback to gemini-2.0-flash or gemini-1.5-flash
   try {
     return genAI.getGenerativeModel({ model: configuredModelName });
   } catch (e) {
@@ -82,7 +81,7 @@ const fallbackClassify = (title = '', description = '') => {
 };
 
 /**
- * Analyze problem statement, extract root cause, severity, and classify canonical domain using Gemini AI
+ * Analyze problem statement, extract root cause, severity, and classify canonical domain using AI
  * 
  * @param {string} title - Problem title
  * @param {string} description - Detailed problem narrative
@@ -158,7 +157,7 @@ Return ONLY a valid, parseable JSON object with NO markdown ticks or other text,
       tags: Array.isArray(parsed.tags) ? parsed.tags : [matchedDomain, location.district || 'Jharkhand', 'SIH-2026']
     };
   } catch (err) {
-    console.warn('[Gemini AI Classification Fallback]:', err.message);
+    console.warn('[AI Classification Fallback]:', err.message);
     return buildFallbackAnalysis(title, description, location, defaultFallbackDomain);
   }
 };
@@ -230,7 +229,7 @@ Return ONLY a valid JSON object with NO markdown ticks:
       explanation: parsed.reason || 'Duplicate problem detected in this locality.'
     };
   } catch (err) {
-    console.warn('[Gemini Deduplication Fallback]:', err.message);
+    console.warn('[AI Deduplication Fallback]:', err.message);
     return fallbackDuplicateCheck(newProblem, existingProblemsInLocation);
   }
 };
@@ -285,8 +284,111 @@ const buildFallbackAnalysis = (title, description, location, domain) => {
   };
 };
 
+/**
+ * Match a University R&D Proposal to the most suitable Corporate CSR / Industry Partner
+ * 
+ * @param {Object} proposal - { title, description, problemStatement, industrySupportRequired, estimatedBudget }
+ * @param {Array<Object>} industryList - List of available industry partners in database
+ * @returns {Promise<Object>} Matching details
+ */
+export const matchProposalToIndustry = async (proposal, industryList = []) => {
+  if (!industryList || industryList.length === 0) {
+    return {
+      matchedPartnerId: null,
+      matchedRationale: 'General CSR Pool allocated for innovative grassroots intervention.',
+      confidence: 0.90,
+      suggestedFundingRange: '₹5,00,000 - ₹15,00,000'
+    };
+  }
+
+  try {
+    const model = getGenerativeModel();
+    if (!model) {
+      return fallbackIndustryMatch(proposal, industryList);
+    }
+
+    const industrySummaries = industryList.map(ind => 
+      `Partner ID: ${ind.partnerId || ind._id} | Name: "${ind.name}" | Type: ${ind.type} | Focus Domains: [${(ind.focusDomains || ind.availableDomains || []).join(', ')}]`
+    ).join('\n');
+
+    const prompt = `
+You are the AI Matchmaking Engine for University R&D Proposals and Corporate CSR/Industry Sponsors in Jharkhand.
+A University has created an innovation & deployment proposal:
+
+Proposal Title: "${proposal.title}"
+Problem Statement: "${proposal.problemStatement}"
+Technical Methodology / Description: "${proposal.description}"
+Required Industry Support: [${(proposal.industrySupportRequired || []).join(', ')}]
+Estimated Budget: ₹${proposal.estimatedBudget || 500000}
+
+Here are the registered Industry Partners / CSR Foundations:
+${industrySummaries}
+
+TASK:
+Select the SINGLE BEST matching industry partner whose CSR mandate, engineering facilities, and focus areas align with this proposal.
+
+Return ONLY a valid JSON object with NO markdown ticks:
+{
+  "matchedPartnerId": "Partner ID of chosen industry partner",
+  "matchedRationale": "Concise 1-2 sentence explanation of why this industry partner is the optimal match",
+  "confidence": 0.94,
+  "suggestedFundingRange": "₹7,50,000 - ₹12,00,000"
+}
+`;
+
+    const result = await model.generateContent(prompt);
+    const textResponse = result.response.text().trim();
+    const cleanedText = textResponse.replace(/^```json\s*/i, '').replace(/\s*```$/i, '').trim();
+    const parsed = JSON.parse(cleanedText);
+
+    const foundPartner = industryList.find(
+      ind => (ind.partnerId && ind.partnerId === parsed.matchedPartnerId) || (ind._id && ind._id.toString() === parsed.matchedPartnerId)
+    ) || industryList[0];
+
+    return {
+      matchedPartnerId: foundPartner?._id,
+      matchedPartnerObj: foundPartner,
+      matchedRationale: parsed.matchedRationale || `Matched based on CSR focus in ${foundPartner?.availableDomains?.[0] || foundPartner?.focusDomains?.[0] || 'Grassroots Innovation'} and required support capabilities.`,
+      confidence: Number(parsed.confidence) || 0.93,
+      suggestedFundingRange: parsed.suggestedFundingRange || '₹5,00,000 - ₹15,00,000'
+    };
+  } catch (err) {
+    console.warn('[AI Industry Match Fallback]:', err.message);
+    return fallbackIndustryMatch(proposal, industryList);
+  }
+};
+
+/**
+ * Fallback industry matching based on domain keywords
+ */
+const fallbackIndustryMatch = (proposal, industryList) => {
+  const text = `${proposal.title} ${proposal.description} ${(proposal.industrySupportRequired || []).join(' ')}`.toLowerCase();
+  
+  let chosen = industryList[0];
+  for (const ind of industryList) {
+    const indText = `${ind.name} ${(ind.availableDomains || ind.focusDomains || []).join(' ')}`.toLowerCase();
+    if (/water|sluice|fabrication|metal|iot/i.test(text) && /steel|tata|jusco/i.test(indText)) {
+      chosen = ind;
+      break;
+    }
+    if (/mine|fire|air|subsidence|energy|coal/i.test(text) && /coal|ccl|mining/i.test(indText)) {
+      chosen = ind;
+      break;
+    }
+  }
+
+  return {
+    matchedPartnerId: chosen?._id,
+    matchedPartnerObj: chosen,
+    matchedRationale: `Matched with ${chosen?.name || 'CSR Partner'} based on aligned industrial capabilities and CSR mandate.`,
+    confidence: 0.90,
+    suggestedFundingRange: '₹5,00,000 - ₹12,00,000'
+  };
+};
+
 export default {
   CANONICAL_DOMAINS,
   analyzeAndClassifyProblem,
-  checkProblemDuplicateInLocation
+  checkProblemDuplicateInLocation,
+  matchProposalToIndustry
 };

@@ -54,11 +54,7 @@ export function StateProvider({ children }) {
   const districts = reduxEcosystem.districts || [];
   const auditLogs = reduxEcosystem.auditLogs || [];
 
-  const [notifications, setNotifications] = useState([
-    { id: 'NOTIF-1', title: 'Torpa Pond Water Pilot Milestone 4 Updated', time: '10 mins ago', read: false, role: 'all' },
-    { id: 'NOTIF-2', title: 'New Challenge Allocated to BIT Mesra', time: '1 hour ago', read: false, role: 'university' },
-    { id: 'NOTIF-3', title: 'Tata Steel CSR Grant ₹12.5L Disbursed for #JH-WTR-1042', time: '3 hours ago', read: true, role: 'industry' }
-  ]);
+  const [notifications, setNotifications] = useState([]);
 
   const setActiveRole = (role) => {
     setActiveRoleState(role);
@@ -154,7 +150,7 @@ export function StateProvider({ children }) {
       const createdProblem = submitAction.payload;
       const ticketId = createdProblem?.ticketId || `JH-${Date.now().toString().slice(-4)}`;
 
-      toast.success(`Problem Statement Registered! Ticket #${ticketId}`);
+      toast.success(`Problem Statement Registered!`);
       logAction('AI Engine', 'AI Auto-Triage & Routing', ticketId, `Categorized as ${payload.domain}`);
       addNotification(`New Challenge #${ticketId} registered and triaged`, 'government');
       setSelectedClusterId(ticketId);

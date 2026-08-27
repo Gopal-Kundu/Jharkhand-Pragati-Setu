@@ -10,7 +10,9 @@ import {
   updateMilestone,
   validateSolution,
   getMapLocations,
-  getNearbyProblems
+  getNearbyProblems,
+  approveTripartiteProposal,
+  getTripartiteProposalsForGovt
 } from '../controllers/problemController.js';
 import upload from '../middleware/uploadMiddleware.js';
 import { protect, optionalAuth, authorizeRoles } from '../middleware/authMiddleware.js';
@@ -23,6 +25,10 @@ router.get('/geo/nearby', getNearbyProblems);
 
 // User-Specific Problems (Track own submitted problems)
 router.get('/user/my', protect, getMyProblems);
+
+// Government Tripartite Proposal Packages & Sanction
+router.get('/proposals/tripartite-packages', protect, getTripartiteProposalsForGovt);
+router.patch('/proposals/:proposalId/govt-approve', protect, approveTripartiteProposal);
 
 // Public / Citizen Problem Submission & Query Routes
 // Multer accepts array of evidence files (photos, videos, docs) under any field name

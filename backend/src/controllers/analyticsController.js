@@ -1,6 +1,7 @@
 import Problem from '../models/Problem.js';
 import University from '../models/University.js';
 import IndustryPartner from '../models/IndustryPartner.js';
+import Proposal from '../models/Proposal.js';
 import { MASTER_DEPARTMENTS_CATALOG, MASTER_DISTRICTS_CATALOG } from '../data/masterCatalog.js';
 
 /**
@@ -13,10 +14,11 @@ export const getAnalytics = async (req, res) => {
     const problems = await Problem.find({});
     const universities = await University.find({});
     const industryPartners = await IndustryPartner.find({});
+    const totalProposalCount = await Proposal.countDocuments({});
 
     const totalProblems = problems.length;
     const allocatedProblems = problems.filter(p => p.status !== 'submitted' && p.status !== 'ai_triage').length;
-    const activeProposals = problems.reduce((acc, p) => acc + (p.proposals?.length || 0), 0);
+    const activeProposals = totalProposalCount;
     const deployedSolutions = problems.filter(p => p.status === 'deployed' || p.status === 'validated').length;
 
     // Domain breakdown

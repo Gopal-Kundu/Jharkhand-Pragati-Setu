@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Outlet, useNavigate } from 'react-router-dom';
+import { Outlet, useNavigate, Link } from 'react-router-dom';
+import { useSelector } from 'react-redux';
 import Navbar from '../common/Navbar';
 import MultiStepSubmissionModal from '../citizen/MultiStepSubmissionModal';
 import AIAssistantModal from '../common/AIAssistantModal';
@@ -9,7 +10,28 @@ import { Toaster } from 'sonner';
 
 export default function MainLayout() {
   const navigate = useNavigate();
+  const authState = useSelector((state) => state.auth);
   const [isPitchTourOpen, setIsPitchTourOpen] = useState(false);
+
+  const getRoleDashboardRoute = (role) => {
+    switch (role) {
+      case 'government':
+      case 'admin':
+        return '/dashboard';
+      case 'university':
+        return '/university';
+      case 'industry':
+        return '/industry';
+      case 'citizen':
+      case 'panchayat':
+      default:
+        return '/community';
+    }
+  };
+
+  const brandDestination = authState.isAuthenticated && authState.user
+    ? getRoleDashboardRoute(authState.user.role)
+    : '/';
 
   const handleJumpFromTour = (role, view) => {
     if (role === 'government') navigate('/dashboard');
@@ -45,10 +67,10 @@ export default function MainLayout() {
       <footer className="bg-white text-slate-600 border-t border-slate-200 text-xs py-10 px-4 sm:px-6 lg:px-8 mt-auto shadow-sm">
         <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-8">
           <div className="space-y-3">
-            <div className="flex items-center space-x-2">
-              <img src="/jharkhand_logo.svg" alt="Jharkhand Emblem" className="w-8 h-8" />
-              <span className="font-black text-slate-900 text-base">Jharkhand Pragati Setu</span>
-            </div>
+            <Link to={brandDestination} className="flex items-center space-x-2 group cursor-pointer w-fit">
+              <img src="/jharkhand_logo.svg" alt="Jharkhand Emblem" className="w-8 h-8 group-hover:scale-105 transition-transform" />
+              <span className="font-black text-slate-900 text-base group-hover:text-emerald-700 transition-colors">Jharkhand Pragati Setu</span>
+            </Link>
             <p className="text-slate-500 text-xs leading-relaxed">
               Smart India Hackathon 2026: Converting grassroots societal challenges into structured research, multidisciplinary university teams, and corporate CSR deployments across Jharkhand.
             </p>

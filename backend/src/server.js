@@ -43,7 +43,7 @@ app.get('/api/health', (req, res) => {
   res.status(200).json({
     status: 'online',
     platform: 'SIH 2026 Societal Problem-to-Innovation Ecosystem',
-    aiModel: process.env.GEMINI_MODEL || 'gemini-3.1-flash-lite',
+    aiEngine: 'Active',
     timestamp: new Date().toISOString()
   });
 });
@@ -99,7 +99,7 @@ const startServer = async () => {
     app.listen(PORT, () => {
       console.log(`=======================================================`);
       console.log(`🚀 SIH 2026 Backend Running on http://localhost:${PORT}`);
-      console.log(`⚡ AI Model: ${process.env.GEMINI_MODEL || 'gemini-3.1-flash-lite'}`);
+      console.log(`⚡ AI Engine: Active`);
       console.log(`🔒 Auth: Secure HTTP-Only Cookies enabled`);
       console.log(`=======================================================`);
     });

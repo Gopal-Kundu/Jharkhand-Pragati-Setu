@@ -20,13 +20,33 @@ export default function Navbar() {
     navigate('/auth');
   };
 
+  const getRoleDashboardRoute = (role) => {
+    switch (role) {
+      case 'government':
+      case 'admin':
+        return '/dashboard';
+      case 'university':
+        return '/university';
+      case 'industry':
+        return '/industry';
+      case 'citizen':
+      case 'panchayat':
+      default:
+        return '/community';
+    }
+  };
+
+  const brandDestination = authState.isAuthenticated && authState.user
+    ? getRoleDashboardRoute(authState.user.role)
+    : '/';
+
   return (
     <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-xl border-b border-slate-200 shadow-sm transition-all">
       <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-2.5 sm:py-3.5 flex items-center justify-between gap-2 sm:gap-4">
         
         {/* 1. Logo & Project Name */}
         <Link 
-          to="/"
+          to={brandDestination}
           className="flex items-center space-x-2 sm:space-x-3 cursor-pointer group flex-shrink-0 min-w-0"
         >
           <div className="relative flex-shrink-0">

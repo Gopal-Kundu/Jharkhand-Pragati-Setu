@@ -1,14 +1,8 @@
-import React, { useEffect } from 'react';
-import { useAppState } from '../context/StateContext';
+import React from 'react';
 import UniversityPortal from '../components/university/UniversityPortal';
 import { GraduationCap } from 'lucide-react';
 
 export default function UniversityPage() {
-  const { loadFullEcosystemData } = useAppState();
-
-  useEffect(() => {
-    loadFullEcosystemData();
-  }, []);
 
   return (
     <div className="space-y-6">

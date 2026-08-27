@@ -26,7 +26,14 @@ const industryPartnerSchema = new mongoose.Schema(
       type: String,
       default: 'Ranchi, Jharkhand'
     },
+    registeredBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      default: null
+    },
     focusDomains: [String],
+    availableDomains: [String],
+    supportCapabilities: [String],
     csrAnnualBudgetInr: {
       type: Number,
       default: 5000000
@@ -35,6 +42,12 @@ const industryPartnerSchema = new mongoose.Schema(
       type: Number,
       default: 0
     },
+    acceptedProposals: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Proposal'
+      }
+    ],
     mentorshipAvailable: {
       type: Boolean,
       default: true

@@ -192,7 +192,7 @@ export default function CitizenPortal() {
       
       const newProblem = res.problem || res;
       setSubmittedTicket(newProblem.ticketId || 'JH-WTR-1042');
-      toast.success(`Problem successfully reported! Ticket: #${newProblem.ticketId || 'Generated'}`);
+      toast.success(`Problem successfully reported!`);
       
       // Reset Form
       setFormData({

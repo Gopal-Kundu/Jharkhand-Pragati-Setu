@@ -16,31 +16,7 @@ import {
 export default function NotificationsModal({ isOpen, onClose, notifications = [], onViewProblem }) {
   if (!isOpen) return null;
 
-  const defaultSampleNotifications = [
-    {
-      title: 'Challenge Statement Assigned to BIT Mesra Lab',
-      message: 'Your reported challenge #JH-WTR-1042 was allocated to BIT Mesra Dept of Environmental Engineering for prototype development.',
-      ticketId: 'JH-WTR-1042',
-      type: 'allocation',
-      createdAt: new Date(Date.now() - 3600000 * 2)
-    },
-    {
-      title: 'CSR Matching Grant Sanctioned (₹12.5 Lakhs)',
-      message: 'Tata Steel Foundation committed a matching CSR grant to fund sensor deployment in Torpa Block.',
-      ticketId: 'JH-WTR-1042',
-      type: 'funding',
-      createdAt: new Date(Date.now() - 3600000 * 24)
-    },
-    {
-      title: 'Field Triage & Severity Verification Completed',
-      message: 'District authorities verified groundwater chemical levels and cleared the project for lab testing.',
-      ticketId: 'JH-WTR-1042',
-      type: 'status_update',
-      createdAt: new Date(Date.now() - 3600000 * 48)
-    }
-  ];
-
-  const displayNotifications = notifications.length > 0 ? notifications : defaultSampleNotifications;
+  const displayNotifications = Array.isArray(notifications) ? notifications : [];
 
   const getTimeAgo = (dateStr) => {
     try {
