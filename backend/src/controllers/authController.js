@@ -23,7 +23,8 @@ const sendTokenCookie = (res, userId) => {
     httpOnly: true, // Prevents XSS attacks by disallowing client-side JS access
     secure: isHttps, // Required for SameSite=None on HTTPS
     sameSite: isHttps ? 'none' : 'lax', // Required for cross-domain cookie transmission
-    path: '/'
+    path: '/',
+    partitioned: true // Enables CHIPS for cross-site cookie partitioning on Vercel
   };
 
   res.cookie('token', token, cookieOptions);
@@ -174,7 +175,8 @@ export const logout = async (req, res) => {
       expires: new Date(0), // Expire cookie immediately
       secure: isHttps,
       sameSite: isHttps ? 'none' : 'lax',
-      path: '/'
+      path: '/',
+      partitioned: true
     });
 
     return res.status(200).json({

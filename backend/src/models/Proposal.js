@@ -114,7 +114,9 @@ const proposalSchema = new mongoose.Schema(
       enum: [
         'submitted',
         'ai_triaged',
+        'industry_matched',
         'offered_by_industry',
+        'rejected_by_industry',
         'accepted_by_university',
         'rejected_by_university',
         'submitted_to_govt',
