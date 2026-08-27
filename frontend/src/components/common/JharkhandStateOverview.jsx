@@ -12,8 +12,8 @@ export default function JharkhandStateOverview() {
     name: 'Jharkhand',
     area: '79,716 sq km',
     population: '3.90 Cr',
-    reported: '1,284',
-    solved: '412'
+    reported: '1,200+',
+    solved: '400+'
   };
 
   return (
@@ -32,7 +32,7 @@ export default function JharkhandStateOverview() {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-stretch">
         
         {/* Left Column: Fullscreen Map Image Card */}
-        <div className="lg:col-span-7 bg-white rounded-3xl border border-slate-200 shadow-xl shadow-slate-200/50 flex flex-col justify-between overflow-hidden relative min-h-[460px] group">
+        <div className="lg:col-span-7 bg-white rounded-3xl border border-slate-200 shadow-sm shadow-slate-200/50 flex flex-col justify-between overflow-hidden relative min-h-[500px] group">
           
           {/* Background Map Image Full Bleed / Full Div Fit */}
           <div className="absolute inset-0 w-full h-full overflow-hidden bg-slate-100 flex items-center justify-center">
@@ -53,13 +53,7 @@ export default function JharkhandStateOverview() {
             </div>
           </div>
 
-          {/* Bottom Telemetry Overlay */}
-          <div className="relative z-10 p-5 sm:p-6 flex items-center justify-between text-white text-xs font-semibold backdrop-blur-[2px]">
-            <span className="drop-shadow-md">Geographic Distribution of Societal Interventions</span>
-            <span className="font-bold text-emerald-300 drop-shadow-md font-mono bg-black/40 px-3 py-1 rounded-full border border-white/20">
-              24 Districts of Jharkhand
-            </span>
-          </div>
+         
 
         </div>
 
@@ -70,18 +64,13 @@ export default function JharkhandStateOverview() {
             {/* Header with Subtitle & Live Stats Badge */}
             <div className="flex items-start justify-between gap-4 mb-6">
               <div>
-                <span className="text-xs font-extrabold font-mono text-amber-700 uppercase tracking-widest block mb-1">
-                  STATE OVERVIEW
-                </span>
+                
                 <h3 className="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight font-heading">
                   {stateStats.name}
                 </h3>
               </div>
 
-              <div className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold font-mono">
-                <span className="w-2 h-2 rounded-full bg-emerald-600 animate-ping inline-block" />
-                <span>• LIVE STATS</span>
-              </div>
+              
             </div>
 
             {/* 4 Stats Grid Cards */}
@@ -134,15 +123,6 @@ export default function JharkhandStateOverview() {
               </div>
 
             </div>
-          </div>
-
-          {/* Bottom Summary Bar */}
-          <div className="mt-6 pt-5 border-t border-slate-100 bg-slate-50/90 p-4 rounded-2xl border border-slate-200 flex items-center justify-between text-xs text-slate-700">
-            <div className="flex items-center space-x-2">
-              <Building2 className="w-4 h-4 text-emerald-700 flex-shrink-0" />
-              <span>Connected to 5 State HEI Research Labs &amp; CSR Foundations</span>
-            </div>
-            <span className="font-bold text-emerald-800 font-mono">100% Verified</span>
           </div>
 
         </div>

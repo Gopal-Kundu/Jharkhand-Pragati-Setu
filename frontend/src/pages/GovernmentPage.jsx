@@ -1,10 +1,16 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useAppState } from '../context/StateContext';
 import GovernmentCommandCenter from '../components/government/GovernmentCommandCenter';
 import ProblemTriageQueue from '../components/government/ProblemTriageQueue';
 import { Building2, ShieldCheck, BarChart3 } from 'lucide-react';
 
 export default function GovernmentPage() {
   const [activeTab, setActiveTab] = useState('dashboard'); // 'dashboard' | 'triage'
+  const { loadFullEcosystemData } = useAppState();
+
+  useEffect(() => {
+    loadFullEcosystemData();
+  }, []);
 
   return (
     <div className="space-y-6">

@@ -1,8 +1,15 @@
-import React from 'react';
+import React, { useEffect } from 'react';
+import { useAppState } from '../context/StateContext';
 import JharkhandGISMap from '../components/gis/JharkhandGISMap';
 import { MapPin } from 'lucide-react';
 
 export default function MapPage() {
+  const { loadFullEcosystemData } = useAppState();
+
+  useEffect(() => {
+    loadFullEcosystemData();
+  }, []);
+
   return (
     <div className="space-y-6">
       {/* Header */}

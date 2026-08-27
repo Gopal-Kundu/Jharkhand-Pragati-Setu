@@ -23,10 +23,12 @@ export function StateProvider({ children }) {
   const reduxEcosystem = useSelector((state) => state.ecosystem);
   const reduxUi = useSelector((state) => state.ui);
 
-  // Auto-fetch complete live ecosystem data from Backend REST APIs on application mount
-  useEffect(() => {
-    dispatch(fetchEcosystemData());
-  }, [dispatch]);
+  // Function to fetch complete live ecosystem data on-demand (when entering specific portals)
+  const loadFullEcosystemData = (force = false) => {
+    if (force || !reduxEcosystem.problems || reduxEcosystem.problems.length <= 6) {
+      dispatch(fetchEcosystemData());
+    }
+  };
 
   // 1. Language: 'en' | 'hi'
   const [lang, setLang] = useState('en');
@@ -319,6 +321,7 @@ export function StateProvider({ children }) {
         validateSolution,
         logAction,
         addNotification,
+        loadFullEcosystemData,
         resetToDefaultData: () => {
           dispatch(fetchEcosystemData());
           toast.info('Ecosystem data refreshed');
@@ -340,7 +343,30 @@ export function StateProvider({ children }) {
 export function useAppState() {
   const context = useContext(StateContext);
   if (!context) {
-    throw new Error('useAppState must be used within a StateProvider');
+    return {
+      lang: 'en',
+      setLang: () => {},
+      activeRole: 'citizen',
+      setActiveRole: () => {},
+      activeView: 'citizen_home',
+      setActiveView: () => {},
+      selectedClusterId: null,
+      setSelectedClusterId: () => {},
+      isSubmitModalOpen: false,
+      setIsSubmitModalOpen: () => {},
+      isAssistantOpen: false,
+      setIsAssistantOpen: () => {},
+      problems: [],
+      problemClusters: [],
+      universities: [],
+      industryPartners: [],
+      departments: [],
+      districts: [],
+      loadFullEcosystemData: () => {},
+      notifications: [],
+      addNotification: () => {},
+      logAction: () => {}
+    };
   }
   return context;
 }

@@ -161,7 +161,7 @@ export const createProblem = async (req, res) => {
  */
 export const getProblems = async (req, res) => {
   try {
-    const { domain, district, status, priority, resolutionStatus, search, page = 1, limit = 50 } = req.query;
+    const { domain, district, status, priority, resolutionStatus, search, sort = 'newest', page = 1, limit = 50 } = req.query;
 
     const filter = {};
 
@@ -189,9 +189,11 @@ export const getProblems = async (req, res) => {
       ];
     }
 
+    const sortOption = sort === 'oldest' || sort === 'asc' ? { createdAt: 1 } : { createdAt: -1 };
+
     const skip = (parseInt(page, 10) - 1) * parseInt(limit, 10);
     const problems = await Problem.find(filter)
-      .sort({ createdAt: -1 })
+      .sort(sortOption)
       .skip(skip)
       .limit(parseInt(limit, 10));
 

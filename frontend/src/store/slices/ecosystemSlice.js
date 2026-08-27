@@ -26,6 +26,18 @@ export const fetchEcosystemData = createAsyncThunk('ecosystem/fetchAll', async (
   }
 });
 
+/**
+ * Targeted Async Thunk: Fetch Oldest 6 Solved Challenges for Landing Page (Minimal API Call)
+ */
+export const fetchSolvedChallenges = createAsyncThunk('ecosystem/fetchSolved', async (limit = 6, { rejectWithValue }) => {
+  try {
+    const data = await problemApi.getProblems({ resolutionStatus: 'solved', sort: 'oldest', limit });
+    return data.problems || [];
+  } catch (error) {
+    return rejectWithValue(error.message);
+  }
+});
+
 // Async Thunk: Submit New Problem
 export const submitProblemThunk = createAsyncThunk('ecosystem/submitProblem', async (formData, { rejectWithValue }) => {
   try {
@@ -146,6 +158,23 @@ export const ecosystemSlice = createSlice({
         state.loading = false;
       })
       .addCase(fetchEcosystemData.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+      });
+
+    // Fetch Solved Challenges (Landing Page Minimal)
+    builder
+      .addCase(fetchSolvedChallenges.pending, (state) => {
+        state.loading = true;
+      })
+      .addCase(fetchSolvedChallenges.fulfilled, (state, action) => {
+        state.problems = action.payload || [];
+        if (!state.selectedProblemId && action.payload.length > 0) {
+          state.selectedProblemId = action.payload[0].ticketId || action.payload[0]._id;
+        }
+        state.loading = false;
+      })
+      .addCase(fetchSolvedChallenges.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
       });

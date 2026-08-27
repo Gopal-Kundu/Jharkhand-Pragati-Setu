@@ -10,7 +10,7 @@ export default function Navbar() {
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const authState = useSelector((state) => state.auth);
-  const { lang, setLang } = useAppState();
+  const { lang = 'en', setLang = () => {} } = useAppState() || {};
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const handleLogout = async () => {

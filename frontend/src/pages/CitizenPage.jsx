@@ -1,10 +1,14 @@
-import React, { useState } from 'react';
+import React, { useEffect } from 'react';
 import { useAppState } from '../context/StateContext';
 import CitizenPortal from '../components/citizen/CitizenPortal';
-import { Sparkles, Plus, Search, Filter } from 'lucide-react';
+import { Sparkles, Plus } from 'lucide-react';
 
 export default function CitizenPage() {
-  const { setIsSubmitModalOpen } = useAppState();
+  const { setIsSubmitModalOpen, loadFullEcosystemData } = useAppState();
+
+  useEffect(() => {
+    loadFullEcosystemData();
+  }, []);
 
   return (
     <div className="space-y-6">

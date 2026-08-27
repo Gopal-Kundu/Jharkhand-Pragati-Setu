@@ -1,8 +1,15 @@
-import React from 'react';
+import React, { useEffect } from 'react';
+import { useAppState } from '../context/StateContext';
 import IndustryPortal from '../components/industry/IndustryPortal';
 import { Briefcase } from 'lucide-react';
 
 export default function IndustryPage() {
+  const { loadFullEcosystemData } = useAppState();
+
+  useEffect(() => {
+    loadFullEcosystemData();
+  }, []);
+
   return (
     <div className="space-y-6">
       {/* Header */}

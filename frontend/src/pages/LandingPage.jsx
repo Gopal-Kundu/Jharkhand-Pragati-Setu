@@ -2,23 +2,16 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppState } from '../context/StateContext';
 import JharkhandStateOverview from '../components/common/JharkhandStateOverview';
+import ProblemDetailsModal from '../components/common/ProblemDetailsModal';
 import {
   Sparkles,
   ArrowRight,
-  ShieldCheck,
-  Building2,
-  GraduationCap,
-  Users,
-  Briefcase,
-  Layers,
   MapPin,
   CheckCircle2,
-  TrendingUp,
-  Cpu,
   ChevronRight,
-  Play,
-  Award,
-  Globe,
+  GraduationCap,
+  Briefcase,
+  Search,
   Droplets,
   Sprout,
   HeartPulse,
@@ -28,15 +21,7 @@ import {
   Building,
   Eye,
   FileCheck,
-  Footprints,
-  Clock,
-  DollarSign,
-  BarChart3,
-  Workflow,
-  Network,
-  FileText,
-  ChevronDown,
-  Search
+  Footprints
 } from 'lucide-react';
 
 const DOMAIN_ICONS = {
@@ -50,19 +35,6 @@ const DOMAIN_ICONS = {
   'Accessibility': Eye,
   'Public Administration': FileCheck,
   'Rural Livelihoods': Footprints
-};
-
-const DOMAIN_COLORS = {
-  'Water Resources': 'bg-sky-50 text-sky-700 border-sky-200',
-  'Agriculture': 'bg-emerald-50 text-emerald-700 border-emerald-200',
-  'Healthcare': 'bg-rose-50 text-rose-700 border-rose-200',
-  'Education': 'bg-amber-50 text-amber-700 border-amber-200',
-  'Environment': 'bg-teal-50 text-teal-700 border-teal-200',
-  'Energy': 'bg-yellow-50 text-yellow-800 border-yellow-200',
-  'Urban Development': 'bg-indigo-50 text-indigo-700 border-indigo-200',
-  'Accessibility': 'bg-purple-50 text-purple-700 border-purple-200',
-  'Public Administration': 'bg-cyan-50 text-cyan-700 border-cyan-200',
-  'Rural Livelihoods': 'bg-lime-50 text-lime-800 border-lime-200'
 };
 
 const DOMAIN_IMAGES = {
@@ -83,13 +55,10 @@ export default function LandingPage() {
   const {
     problems,
     problemClusters,
-    setIsSubmitModalOpen,
-    setIsAssistantOpen,
-    setActiveRole,
-    setSelectedClusterId
+    setIsSubmitModalOpen
   } = useAppState();
 
-  const [selectedDomain, setSelectedDomain] = useState('all');
+  const [activeDetailProblemId, setActiveDetailProblemId] = useState(null);
 
   const allProblemsList = (problems && problems.length > 0) ? problems : (problemClusters || []);
   
@@ -97,13 +66,9 @@ export default function LandingPage() {
   const solvedChallenges = allProblemsList.filter(p => p.resolutionStatus === 'solved' || p.status === 'validated');
   const displayList = solvedChallenges.length > 0 ? solvedChallenges : allProblemsList;
 
-  const filteredProblems = selectedDomain === 'all'
-    ? displayList
-    : displayList.filter(p => p.domain === selectedDomain || p.primaryDomain === selectedDomain);
-
   const handleOpenProblem = (id) => {
-    setSelectedClusterId(id);
-    navigate('/dashboard');
+    // Open on-demand details modal which calls separate API GET /api/problems/:id
+    setActiveDetailProblemId(id);
   };
 
   return (
@@ -152,19 +117,19 @@ export default function LandingPage() {
           {/* Live Platform KPI Stats Ribbon */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 max-w-5xl mx-auto pt-8">
             <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-sm text-center">
-              <div className="text-2xl sm:text-3xl font-black text-slate-900 font-heading">8+</div>
+              <div className="text-2xl sm:text-3xl font-black text-slate-900 font-heading">1,284</div>
               <div className="text-xs text-slate-500 font-medium mt-1">Reported Challenges</div>
             </div>
             <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-sm text-center">
-              <div className="text-2xl sm:text-3xl font-black text-emerald-700 font-heading">6 Solved</div>
-              <div className="text-xs text-slate-500 font-medium mt-1">Field Tested & Deployed</div>
+              <div className="text-2xl sm:text-3xl font-black text-emerald-700 font-heading">400+</div>
+              <div className="text-xs text-slate-500 font-medium mt-1">Challenges Solved</div>
             </div>
             <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-sm text-center">
-              <div className="text-2xl sm:text-3xl font-black text-emerald-800 font-heading">₹1.85 Cr</div>
-              <div className="text-xs text-slate-500 font-medium mt-1">CSR Grants Disbursed</div>
+              <div className="text-2xl sm:text-3xl font-black text-emerald-800 font-heading">₹10.85 Cr</div>
+              <div className="text-xs text-slate-500 font-medium mt-1">Grants Disbursed</div>
             </div>
             <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-sm text-center">
-              <div className="text-2xl sm:text-3xl font-black text-amber-600 font-heading">65,000+</div>
+              <div className="text-2xl sm:text-3xl font-black text-amber-600 font-heading">65,0000+</div>
               <div className="text-xs text-slate-500 font-medium mt-1">Citizens Impacted</div>
             </div>
           </div>
@@ -178,11 +143,7 @@ export default function LandingPage() {
       {/* 3. Solved Challenges Grid with Problem Images */}
       <section id="challenges-section" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 scroll-mt-20">
         <div className="mb-8">
-          <span className="inline-flex items-center space-x-1.5 text-xs font-bold font-mono uppercase tracking-widest text-emerald-800 bg-emerald-100 px-3.5 py-1.5 rounded-full border border-emerald-200">
-            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-700" />
-            <span>Field Tested & Deployed in Jharkhand</span>
-          </span>
-          <h2 className="text-3xl sm:text-4xl font-extrabold text-slate-900 mt-2 font-heading">
+          <h2 className="text-3xl sm:text-4xl font-extrabold text-slate-900 font-heading">
             Solved Challenges
           </h2>
         </div>
@@ -268,6 +229,15 @@ export default function LandingPage() {
           })}
         </div>
       </section>
+
+      {/* On-Demand Individual Problem Details Modal */}
+      {activeDetailProblemId && (
+        <ProblemDetailsModal
+          problemId={activeDetailProblemId}
+          onClose={() => setActiveDetailProblemId(null)}
+        />
+      )}
+
     </div>
   );
 }

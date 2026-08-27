@@ -1,8 +1,15 @@
-import React from 'react';
+import React, { useEffect } from 'react';
+import { useAppState } from '../context/StateContext';
 import PanchayatPortal from '../components/panchayat/PanchayatPortal';
 import { Layers } from 'lucide-react';
 
 export default function PanchayatPage() {
+  const { loadFullEcosystemData } = useAppState();
+
+  useEffect(() => {
+    loadFullEcosystemData();
+  }, []);
+
   return (
     <div className="space-y-6">
       <div className="bg-white border-b border-slate-200 py-6 px-4 sm:px-6 lg:px-8 shadow-sm">
