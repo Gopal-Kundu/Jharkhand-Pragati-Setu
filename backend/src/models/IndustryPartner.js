@@ -49,7 +49,18 @@ const industryPartnerSchema = new mongoose.Schema(
     contactEmail: {
       type: String,
       default: ''
-    }
+    },
+    notifications: [
+      {
+        proposalId: { type: mongoose.Schema.Types.ObjectId, ref: 'Proposal' },
+        problemId: { type: mongoose.Schema.Types.ObjectId, ref: 'Problem' },
+        title: { type: String, required: true },
+        message: { type: String, required: true },
+        domain: { type: String, default: '' },
+        read: { type: Boolean, default: false },
+        createdAt: { type: Date, default: Date.now }
+      }
+    ]
   },
   {
     timestamps: true

@@ -1,5 +1,12 @@
 import express from 'express';
-import { register, login, logout, getMe } from '../controllers/authController.js';
+import {
+  register,
+  login,
+  logout,
+  getMe,
+  getUserNotifications,
+  markNotificationsAsRead
+} from '../controllers/authController.js';
 import { protect } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
@@ -11,5 +18,9 @@ router.post('/logout', logout);
 
 // Private User Profile Endpoint (uses HTTP-Only cookie verification)
 router.get('/me', protect, getMe);
+
+// User Notifications Endpoints
+router.get('/notifications', protect, getUserNotifications);
+router.patch('/notifications/read', protect, markNotificationsAsRead);
 
 export default router;

@@ -54,7 +54,13 @@ const problemSchema = new mongoose.Schema(
         coordinates: { type: [Number], default: [85.3096, 23.3441] } // GeoJSON: [longitude, latitude]
       }
     },
+    user: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      index: true
+    },
     submitter: {
+      userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
       name: { type: String, default: 'Concerned Citizen' },
       role: {
         type: String,

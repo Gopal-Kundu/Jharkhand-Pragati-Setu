@@ -2,6 +2,7 @@ import express from 'express';
 import {
   createProblem,
   getProblems,
+  getMyProblems,
   getProblemById,
   triageAndAllocate,
   submitProposal,
@@ -12,7 +13,7 @@ import {
   getNearbyProblems
 } from '../controllers/problemController.js';
 import upload from '../middleware/uploadMiddleware.js';
-import { protect, authorizeRoles } from '../middleware/authMiddleware.js';
+import { protect, optionalAuth, authorizeRoles } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
 
@@ -20,11 +21,14 @@ const router = express.Router();
 router.get('/map/locations', getMapLocations);
 router.get('/geo/nearby', getNearbyProblems);
 
+// User-Specific Problems (Track own submitted problems)
+router.get('/user/my', protect, getMyProblems);
+
 // Public / Citizen Problem Submission & Query Routes
-// Multer accepts array of evidence files (photos, videos, docs) under field name 'evidence'
+// Multer accepts array of evidence files (photos, videos, docs) under any field name
 router.route('/')
   .get(getProblems)
-  .post(upload.array('evidence', 5), createProblem);
+  .post(optionalAuth, upload.any(), createProblem);
 
 router.route('/:id')
   .get(getProblemById);

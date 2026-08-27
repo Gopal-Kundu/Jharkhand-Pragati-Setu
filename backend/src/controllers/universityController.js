@@ -46,11 +46,20 @@ export const getUniversities = async (req, res) => {
 export const getUniversityById = async (req, res) => {
   try {
     const { id } = req.params;
-    const university = await University.findOne({
-      $or: [{ _id: id.match(/^[0-9a-fA-F]{24}$/) ? id : null }, { institutionId: id }]
-    });
+    const isObjectId = /^[0-9a-fA-F]{24}$/.test(id);
+    const query = isObjectId 
+      ? { $or: [{ _id: id }, { institutionId: id }, { shortName: new RegExp(`^${id}$`, 'i') }] }
+      : { $or: [{ institutionId: id }, { shortName: new RegExp(`^${id}$`, 'i') }] };
+
+    let university = await University.findOne(query);
 
     if (!university) {
+      const fallback = (MASTER_HEI_CATALOG || []).find(
+        h => h.institutionId === id || h.id === id || h.shortName?.toLowerCase() === id.toLowerCase()
+      );
+      if (fallback) {
+        return res.status(200).json({ success: true, university: fallback });
+      }
       return res.status(404).json({
         success: false,
         message: `University '${id}' not found`

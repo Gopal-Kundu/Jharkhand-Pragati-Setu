@@ -1,8 +1,8 @@
 import React, { useEffect } from 'react';
 import { useAppState } from '../context/StateContext';
-import CitizenPortal from '../components/citizen/CitizenPortal';
+import CommunityPortal from '../components/community/CommunityPortal';
 
-export default function CitizenPage() {
+export default function CommunityPage() {
   const { loadFullEcosystemData } = useAppState();
 
   useEffect(() => {
@@ -11,7 +11,7 @@ export default function CitizenPage() {
 
   return (
     <div className="py-6">
-      <CitizenPortal />
+      <CommunityPortal />
     </div>
   );
 }

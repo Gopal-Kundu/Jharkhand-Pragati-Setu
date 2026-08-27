@@ -1,5 +1,8 @@
 import Problem from '../models/Problem.js';
 import University from '../models/University.js';
+import User from '../models/User.js';
+import Location from '../models/Location.js';
+import { analyzeAndClassifyProblem, checkProblemDuplicateInLocation } from '../ai/geminiService.js';
 import { uploadMediaToCloudinary } from '../cloudinary/upload.js';
 import { sendProblemSubmittedEmail, sendUniversityAllocationEmail } from '../email/emailService.js';
 
@@ -25,7 +28,7 @@ const generateTicketId = (domain = 'GEN') => {
 };
 
 /**
- * @desc    Submit a new societal challenge statement (with photo, video, GPS, and documents)
+ * @desc    Submit a new societal challenge statement (AI domain classification, location deduplication & university matching)
  * @route   POST /api/problems
  * @access  Public / Authenticated
  */
@@ -34,10 +37,8 @@ export const createProblem = async (req, res) => {
     const {
       title,
       description,
-      domain = 'Water Resources',
       location,
       submitter,
-      aiAnalysis,
       priority = 'Medium'
     } = req.body;
 
@@ -48,10 +49,9 @@ export const createProblem = async (req, res) => {
       });
     }
 
-    // Parse nested JSON if sent via multipart/form-data
+    // 1. Parse nested JSON if sent via multipart/form-data
     const parsedLocation = typeof location === 'string' ? JSON.parse(location) : (location || { district: 'Ranchi', state: 'Jharkhand' });
     const parsedSubmitter = typeof submitter === 'string' ? JSON.parse(submitter) : (submitter || { name: 'Concerned Citizen', role: 'individual_citizen' });
-    const parsedAiAnalysis = typeof aiAnalysis === 'string' ? JSON.parse(aiAnalysis) : (aiAnalysis || {});
 
     // Ensure GPS coordinates are structured for MongoDB Geospatial storage
     const lat = Number(parsedLocation.lat) || 23.3441;
@@ -63,7 +63,41 @@ export const createProblem = async (req, res) => {
       coordinates: [lng, lat]
     };
 
-    // Upload multimedia evidence files if present via Multer & Cloudinary
+    // 2. Locality Deduplication Search (District, Block, Panchayat)
+    const locFilter = { district: new RegExp(`^${parsedLocation.district || 'Ranchi'}$`, 'i') };
+    if (parsedLocation.block) {
+      locFilter.block = new RegExp(`^${parsedLocation.block}$`, 'i');
+    }
+    if (parsedLocation.panchayat) {
+      locFilter.panchayat = new RegExp(`^${parsedLocation.panchayat}$`, 'i');
+    }
+
+    const existingLocationRecords = await Location.find(locFilter).populate('problem').limit(15);
+    const existingProblemsInLocality = existingLocationRecords
+      .map(loc => loc.problem)
+      .filter(p => p && p.title && p.status !== 'rejected');
+
+    if (existingProblemsInLocality.length > 0) {
+      const duplicateResult = await checkProblemDuplicateInLocation(
+        { title, description, location: parsedLocation },
+        existingProblemsInLocality
+      );
+
+      if (duplicateResult.isDuplicate) {
+        return res.status(409).json({
+          success: false,
+          duplicate: true,
+          message: `This problem has already been reported in this locality (${parsedLocation.panchayat || parsedLocation.block || parsedLocation.district}). Registered under #${duplicateResult.matchedTicketId || 'JH-WTR-1042'}.`,
+          existingTicketId: duplicateResult.matchedTicketId
+        });
+      }
+    }
+
+    // 3. Gemini AI Autonomous Domain Classification & Problem Analysis
+    const aiAnalysisResult = await analyzeAndClassifyProblem(title, description, parsedLocation);
+    const decidedDomain = aiAnalysisResult.domain || 'Water Resources';
+
+    // 4. Upload multimedia evidence files if present via Multer & Cloudinary
     const evidenceList = [];
     if (req.files && req.files.length > 0) {
       for (const file of req.files) {
@@ -88,7 +122,6 @@ export const createProblem = async (req, res) => {
         });
       }
     } else if (req.body.evidenceUrl) {
-      // Fallback if URL string passed directly
       evidenceList.push({
         type: 'photo',
         url: req.body.evidenceUrl,
@@ -97,43 +130,139 @@ export const createProblem = async (req, res) => {
       });
     }
 
-    const ticketId = generateTicketId(domain);
+    const ticketId = generateTicketId(decidedDomain);
 
+    if (req.user) {
+      parsedSubmitter.userId = req.user._id;
+      if (!parsedSubmitter.name || parsedSubmitter.name === 'Concerned Citizen') {
+        parsedSubmitter.name = req.user.name;
+      }
+      if (!parsedSubmitter.email) {
+        parsedSubmitter.email = req.user.email;
+      }
+      if (!parsedSubmitter.phone && req.user.phone) {
+        parsedSubmitter.phone = req.user.phone;
+      }
+    }
+
+    // 5. Create Problem Record with AI-decided Domain
     const newProblem = new Problem({
       ticketId,
       title,
       description,
-      domain,
+      domain: decidedDomain,
       location: parsedLocation,
+      user: req.user ? req.user._id : undefined,
       submitter: parsedSubmitter,
       evidence: evidenceList,
       aiAnalysis: {
-        domain: parsedAiAnalysis.domain || domain,
-        category: parsedAiAnalysis.category || `${domain} Innovation Intervention`,
-        severity: parsedAiAnalysis.severity || 7.5,
-        confidence: parsedAiAnalysis.confidence || 0.92,
-        urgency: parsedAiAnalysis.urgency || priority,
-        recommendedDisciplines: parsedAiAnalysis.recommendedDisciplines || ['Multidisciplinary Engineering'],
-        recommendedUniversities: parsedAiAnalysis.recommendedUniversities || [],
-        tags: parsedAiAnalysis.tags || [domain, parsedLocation.district || 'Jharkhand', 'SIH-2026'],
-        summary: parsedAiAnalysis.summary || description.slice(0, 160)
+        domain: decidedDomain,
+        category: aiAnalysisResult.category,
+        severity: aiAnalysisResult.severity,
+        confidence: aiAnalysisResult.confidence,
+        urgency: aiAnalysisResult.urgency,
+        recommendedDisciplines: aiAnalysisResult.recommendedDisciplines,
+        recommendedUniversities: [],
+        tags: aiAnalysisResult.tags,
+        summary: aiAnalysisResult.summary,
+        rootCause: aiAnalysisResult.rootCause
       },
       status: 'submitted',
-      priority: parsedAiAnalysis.urgency || priority,
+      priority: aiAnalysisResult.urgency || priority,
       auditHistory: [
         {
           timestamp: new Date(),
           officer: parsedSubmitter.name || 'Citizen / Local Body',
           role: parsedSubmitter.role || 'citizen',
-          action: 'Problem Statement Registered',
-          note: `Registered with ${evidenceList.length} multimedia evidence attachments from ${parsedLocation.district || 'Jharkhand'}`
+          action: 'Problem Statement Registered (AI Domain Decided)',
+          note: `Classified into '${decidedDomain}' by Gemini AI with ${evidenceList.length} evidence attachments from ${parsedLocation.district || 'Jharkhand'}`
         }
       ]
     });
 
     await newProblem.save();
 
-    // Trigger confirmation email if email provided
+    // 6. Create Location Document linking Problem
+    try {
+      await Location.create({
+        problem: newProblem._id,
+        district: parsedLocation.district || 'Ranchi',
+        block: parsedLocation.block || '',
+        panchayat: parsedLocation.panchayat || '',
+        state: parsedLocation.state || 'Jharkhand',
+        lat: parsedLocation.lat,
+        lng: parsedLocation.lng,
+        address: parsedLocation.address || '',
+        pincode: parsedLocation.pincode || '',
+        geoPoint: parsedLocation.geoPoint
+      });
+    } catch (locErr) {
+      console.warn('[Location Save Warning]:', locErr.message);
+    }
+
+    // 7. University Matching & Notification Dispatch
+    try {
+      const disciplineRegexes = (aiAnalysisResult.recommendedDisciplines || []).map(d => new RegExp(d, 'i'));
+      const matchedUniversities = await University.find({
+        $or: [
+          { academicDisciplines: { $in: disciplineRegexes } },
+          { academicDisciplines: new RegExp(decidedDomain, 'i') },
+          { researchCentres: new RegExp(decidedDomain, 'i') }
+        ]
+      });
+
+      const universitiesToNotify = matchedUniversities.length > 0 
+        ? matchedUniversities 
+        : await University.find().limit(3);
+
+      const univNotification = {
+        problemId: newProblem._id,
+        ticketId: newProblem.ticketId,
+        title: `New Challenge Statement Matched (${decidedDomain})`,
+        message: `A new societal problem from ${parsedLocation.district} ('${newProblem.title}') was matched to your university domain capabilities.`,
+        domain: decidedDomain,
+        read: false,
+        createdAt: new Date()
+      };
+
+      for (const univ of universitiesToNotify) {
+        await University.findByIdAndUpdate(univ._id, {
+          $push: {
+            notifications: {
+              $each: [univNotification],
+              $position: 0
+            }
+          }
+        });
+      }
+    } catch (univNotifErr) {
+      console.warn('[University Notification Error]:', univNotifErr.message);
+    }
+
+    // 8. Push notification to Submitter User
+    if (req.user) {
+      try {
+        await User.findByIdAndUpdate(req.user._id, {
+          $push: {
+            notifications: {
+              $each: [{
+                title: `Challenge Logged: ${decidedDomain} (#${ticketId})`,
+                message: `Your challenge '${title}' was analyzed by Gemini AI and classified as '${decidedDomain}'. Sent for University R&D matching.`,
+                ticketId,
+                type: 'status_update',
+                read: false,
+                createdAt: new Date()
+              }],
+              $position: 0
+            }
+          }
+        });
+      } catch (notifErr) {
+        console.warn('[User Notification Error]:', notifErr.message);
+      }
+    }
+
+    // 9. Trigger confirmation email if email provided
     if (parsedSubmitter.email) {
       sendProblemSubmittedEmail(newProblem, parsedSubmitter.email).catch(err =>
         console.warn('[Email Warning]:', err.message)
@@ -142,14 +271,52 @@ export const createProblem = async (req, res) => {
 
     return res.status(201).json({
       success: true,
-      message: `Societal challenge registered successfully with Ticket ID #${ticketId}`,
+      message: `Societal challenge registered successfully with Ticket ID #${ticketId}. AI classified domain: '${decidedDomain}'`,
       problem: newProblem
     });
   } catch (error) {
     console.error('[Problem Create Controller Error]:', error);
     return res.status(500).json({
       success: false,
-      message: error.message || 'Server error while submitting problem statement'
+      message: error.message || 'Server error submitting problem statement'
+    });
+  }
+};
+
+/**
+ * @desc    Get all problems submitted by currently authenticated user
+ * @route   GET /api/problems/user/my
+ * @access  Private
+ */
+export const getMyProblems = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const userEmail = req.user.email;
+    const userPhone = req.user.phone;
+
+    const queryConditions = [
+      { user: userId },
+      { 'submitter.userId': userId }
+    ];
+    if (userEmail) {
+      queryConditions.push({ 'submitter.email': userEmail });
+    }
+    if (userPhone) {
+      queryConditions.push({ 'submitter.phone': userPhone });
+    }
+
+    const problems = await Problem.find({ $or: queryConditions }).sort({ createdAt: -1 });
+
+    return res.status(200).json({
+      success: true,
+      count: problems.length,
+      problems
+    });
+  } catch (error) {
+    console.error('[Get My Problems Error]:', error);
+    return res.status(500).json({
+      success: false,
+      message: error.message || 'Server error fetching your submitted problems'
     });
   }
 };

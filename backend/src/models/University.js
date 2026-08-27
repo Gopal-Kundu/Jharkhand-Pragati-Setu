@@ -35,6 +35,34 @@ const universitySchema = new mongoose.Schema(
       type: Number,
       default: null
     },
+    availableDomains: [
+      {
+        type: String,
+        enum: [
+          'Education',
+          'Agriculture',
+          'Healthcare',
+          'Water Resources',
+          'Environment',
+          'Energy',
+          'Urban Development',
+          'Accessibility',
+          'Public Administration',
+          'Rural Livelihoods'
+        ]
+      }
+    ],
+    proposals: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Proposal'
+      }
+    ],
+    registeredBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      default: null
+    },
     academicDisciplines: [String],
     researchCentres: [String],
     incubationCentres: [String],
@@ -62,7 +90,18 @@ const universitySchema = new mongoose.Schema(
     contactEmail: {
       type: String,
       default: ''
-    }
+    },
+    notifications: [
+      {
+        problemId: { type: mongoose.Schema.Types.ObjectId, ref: 'Problem' },
+        ticketId: { type: String, default: '' },
+        title: { type: String, required: true },
+        message: { type: String, required: true },
+        domain: { type: String, default: '' },
+        read: { type: Boolean, default: false },
+        createdAt: { type: Date, default: Date.now }
+      }
+    ]
   },
   {
     timestamps: true

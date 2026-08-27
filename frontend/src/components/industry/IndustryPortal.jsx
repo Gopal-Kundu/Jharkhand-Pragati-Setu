@@ -58,31 +58,32 @@ export default function IndustryPortal() {
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 animate-in fade-in">
-      {/* Industry Banner */}
-      <div className="bg-gradient-to-r from-amber-950 via-slate-900 to-slate-950 text-white rounded-3xl p-6 sm:p-8 shadow-xl space-y-4">
+      
+      {/* 1. Industry / CSR Header Banner (Clean White & Emerald) */}
+      <div className="bg-white text-slate-900 rounded-3xl p-6 sm:p-8 shadow-sm border border-slate-200 space-y-4">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div className="space-y-1">
-            <div className="inline-flex items-center space-x-2 bg-amber-500/30 border border-amber-400/40 text-amber-200 text-xs font-bold px-3 py-1 rounded-full">
-              <Briefcase className="w-3.5 h-3.5" />
-              <span>Corporate CSR, Startup & Industry Innovation Exchange</span>
+          <div className="space-y-1.5">
+            <div className="inline-flex items-center space-x-2 bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-black px-3 py-1 rounded-full">
+              <Briefcase className="w-3.5 h-3.5 text-emerald-600" />
+              <span>Corporate CSR, Startup &amp; Industry Innovation Exchange</span>
             </div>
-            <h1 className="text-xl sm:text-3xl font-extrabold tracking-tight">
+            <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-slate-900 font-heading">
               {currentPartner?.name || 'Corporate CSR Partner'}
             </h1>
-            <p className="text-xs text-amber-200/80">
-              {currentPartner?.category || 'CSR Foundation'} • HQ: {currentPartner?.hq || 'Jharkhand'} • Committed CSR Pool: <strong>{currentPartner?.pledgeCapacity || '₹10 Cr'}</strong>
+            <p className="text-xs sm:text-sm text-slate-600">
+              {currentPartner?.category || 'CSR Foundation'} • HQ: {currentPartner?.hq || 'Jharkhand'} • Committed CSR Pool: <strong className="text-emerald-700 font-bold">{currentPartner?.pledgeCapacity || '₹10 Cr'}</strong>
             </p>
           </div>
 
           {/* Switch Industry Partner Profile */}
-          <div className="bg-white/10 p-3 rounded-2xl border border-white/10 text-xs space-y-1">
-            <span className="text-[10px] text-amber-300 font-bold uppercase tracking-wider block">
+          <div className="bg-slate-50 p-3 rounded-2xl border border-slate-200 text-xs space-y-1 self-start md:self-auto">
+            <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider block">
               Active Industry / CSR Profile:
             </span>
             <select
               value={activePartnerId}
               onChange={(e) => setActivePartnerId(e.target.value)}
-              className="bg-amber-900/90 text-white font-bold text-xs p-2 rounded-xl border border-amber-400 focus:outline-none"
+              className="bg-white text-slate-900 font-bold text-xs p-2 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 cursor-pointer"
             >
               {(industryPartners || []).map(p => (
                 <option key={p?.id || Math.random()} value={p?.id}>{p?.shortName || p?.name}</option>
@@ -92,13 +93,13 @@ export default function IndustryPortal() {
         </div>
 
         {/* Corporate Resources Offered */}
-        <div className="pt-3 border-t border-amber-800/60">
-          <span className="text-[11px] font-bold text-amber-300 uppercase tracking-wider block mb-1.5">
-            CSR Mandate & Resources Available for Deployment:
+        <div className="pt-4 border-t border-slate-100">
+          <span className="text-[10.5px] font-bold text-slate-500 uppercase tracking-wider block mb-2">
+            CSR Mandate &amp; Resources Available for Deployment:
           </span>
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2 text-xs">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2.5 text-xs">
             {(currentPartner?.offeredResources || []).map((res, i) => (
-              <div key={i} className="bg-amber-950/60 border border-amber-800/60 p-2.5 rounded-xl text-amber-100 font-medium">
+              <div key={i} className="bg-slate-50 border border-slate-200 p-3 rounded-2xl text-slate-800 font-medium shadow-2xs">
                 {res}
               </div>
             ))}
@@ -106,23 +107,23 @@ export default function IndustryPortal() {
         </div>
       </div>
 
-      {/* Projects Seeking Industry Co-creation */}
+      {/* 2. Projects Seeking Industry Co-creation */}
       <div className="space-y-4">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <div>
-            <h3 className="font-extrabold text-lg text-slate-900">
+            <h3 className="font-bold text-xl text-slate-900 font-heading">
               Active University Projects Seeking Industry / CSR Partners
             </h3>
-            <p className="text-xs text-slate-500">
-              All co-creations receive Section 135 CSR tax exemption & verified digital impact audit certificates.
+            <p className="text-xs sm:text-sm text-slate-600">
+              All co-creations receive Section 135 CSR tax exemption &amp; verified digital impact audit certificates.
             </p>
           </div>
-          <span className="text-xs font-bold text-amber-800 bg-amber-50 px-3 py-1 rounded-lg border border-amber-200">
-            {projectsSeekingIndustry.length} Active R&D Projects
+          <span className="text-xs font-bold text-emerald-800 bg-emerald-50 px-3.5 py-1.5 rounded-xl border border-emerald-200 self-start sm:self-auto">
+            {projectsSeekingIndustry.length} Active R&amp;D Projects
           </span>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {projectsSeekingIndustry.map((cluster) => {
             const prj = cluster.project;
             const hasJoined = prj.industryPartners?.some(p => p.partnerId === activePartnerId);
@@ -130,52 +131,52 @@ export default function IndustryPortal() {
             return (
               <div
                 key={cluster.id}
-                className="bg-white rounded-2xl p-5 border border-slate-200 hover:border-amber-400 shadow-sm hover:shadow-md transition-all flex flex-col justify-between space-y-4"
+                className="bg-white rounded-3xl p-6 border border-slate-200 hover:border-emerald-500/60 shadow-sm hover:shadow-xl transition-all flex flex-col justify-between space-y-4"
               >
-                <div className="space-y-2">
+                <div className="space-y-3">
                   <div className="flex items-center justify-between">
-                    <span className="font-mono text-xs font-bold text-slate-700 bg-slate-100 px-2 py-0.5 rounded">
+                    <span className="font-mono text-xs font-black text-slate-800 bg-slate-100 border border-slate-200 px-3 py-1 rounded-xl">
                       {prj.projectId} • #{cluster.id}
                     </span>
-                    <span className="text-emerald-800 font-extrabold bg-emerald-50 px-2.5 py-0.5 rounded-full text-xs">
+                    <span className="text-emerald-800 font-extrabold bg-emerald-50 border border-emerald-200 px-3 py-1 rounded-full text-xs">
                       Stage: {cluster.status}
                     </span>
                   </div>
 
-                  <h4 className="font-extrabold text-base text-slate-900 leading-snug">
+                  <h4 className="font-bold text-lg text-slate-900 font-heading leading-snug">
                     {prj.title}
                   </h4>
 
-                  <div className="flex items-center space-x-2 text-xs text-slate-500">
-                    <Building2 className="w-3.5 h-3.5 text-amber-600" />
-                    <span>Lead: <strong>{prj.leadInstitution}</strong> • {cluster.districtName}</span>
+                  <div className="flex items-center space-x-1.5 text-xs text-slate-500">
+                    <Building2 className="w-3.5 h-3.5 text-emerald-600" />
+                    <span>Lead: <strong className="text-slate-800">{prj.leadInstitution}</strong> • {cluster.districtName}</span>
                   </div>
 
-                  <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 text-xs grid grid-cols-2 gap-2">
+                  <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200 text-xs grid grid-cols-2 gap-3">
                     <div>
-                      <span className="text-[10px] text-slate-400 block">Total Budget:</span>
-                      <strong className="text-slate-900">{prj.budget.totalRequested}</strong>
+                      <span className="text-[10.5px] text-slate-500 font-medium block">Total Budget:</span>
+                      <strong className="text-slate-900 text-sm font-bold">{prj.budget.totalRequested}</strong>
                     </div>
                     <div>
-                      <span className="text-[10px] text-slate-400 block">Govt Grant Backing:</span>
-                      <strong className="text-emerald-700">{prj.budget.govtGrantApproved}</strong>
+                      <span className="text-[10.5px] text-slate-500 font-medium block">Govt Grant Backing:</span>
+                      <strong className="text-emerald-700 text-sm font-bold">{prj.budget.govtGrantApproved}</strong>
                     </div>
                   </div>
 
                   {prj.industryPartners && prj.industryPartners.length > 0 && (
-                    <div className="text-[11px] text-slate-600">
-                      <strong>Current Collaborators:</strong> {prj.industryPartners.map(p => p.name).join(', ')}
+                    <div className="text-xs text-slate-600 bg-slate-50 p-2.5 rounded-xl border border-slate-200">
+                      <strong className="text-slate-800">Current Collaborators:</strong> {prj.industryPartners.map(p => p.name).join(', ')}
                     </div>
                   )}
                 </div>
 
-                <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
+                <div className="pt-4 border-t border-slate-100 flex items-center justify-between text-xs">
                   <button
                     onClick={() => {
                       setSelectedClusterId(cluster.id);
                       setActiveView('cluster_detail');
                     }}
-                    className="text-amber-800 hover:text-amber-950 font-bold hover:underline"
+                    className="text-slate-600 hover:text-emerald-700 font-bold transition-colors cursor-pointer"
                   >
                     View Project Workspace &rarr;
                   </button>
@@ -183,14 +184,14 @@ export default function IndustryPortal() {
                   {!hasJoined ? (
                     <button
                       onClick={() => setSelectedProjectForPledge(cluster.id)}
-                      className="bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold px-3.5 py-1.5 rounded-lg shadow-xs cursor-pointer flex items-center space-x-1"
+                      className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-4 py-2.5 rounded-xl shadow-md shadow-emerald-600/20 cursor-pointer flex items-center space-x-1.5 transition-all hover:scale-105"
                     >
-                      <Briefcase className="w-3.5 h-3.5" />
+                      <Briefcase className="w-4 h-4" />
                       <span>Pledge Support / Grant</span>
                     </button>
                   ) : (
-                    <span className="text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-lg font-bold flex items-center space-x-1">
-                      <Check className="w-3.5 h-3.5" />
+                    <span className="text-emerald-800 bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-xl font-bold flex items-center space-x-1">
+                      <Check className="w-4 h-4 text-emerald-600" />
                       <span>Support Pledged</span>
                     </span>
                   )}
@@ -201,14 +202,14 @@ export default function IndustryPortal() {
         </div>
       </div>
 
-      {/* Quick Pledge Modal */}
+      {/* 3. Quick Pledge Modal */}
       {selectedProjectForPledge && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
-          <div className="bg-white max-w-md w-full rounded-2xl p-5 shadow-2xl border border-slate-200 space-y-4">
-            <h3 className="font-extrabold text-base text-slate-900">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-sm animate-in fade-in">
+          <div className="bg-white max-w-md w-full rounded-3xl p-6 sm:p-8 shadow-2xl border border-slate-200 space-y-4">
+            <h3 className="font-bold text-lg text-slate-900 font-heading">
               Pledge Support as {currentPartner.name}
             </h3>
-            <p className="text-xs text-slate-500">
+            <p className="text-xs text-slate-600">
               Confirm your corporate commitment for project #{selectedProjectForPledge}.
             </p>
 
@@ -218,12 +219,12 @@ export default function IndustryPortal() {
                 <select
                   value={pledgeDetails.type}
                   onChange={(e) => setPledgeDetails({ ...pledgeDetails, type: e.target.value })}
-                  className="w-full p-2.5 border border-slate-300 rounded-lg bg-white"
+                  className="w-full p-2.5 border border-slate-200 rounded-xl bg-slate-50 text-slate-900 font-medium focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 focus:outline-none"
                 >
-                  <option value="CSR Innovation Grant & Field Vehicle">CSR Innovation Grant & Field Vehicle</option>
-                  <option value="Sensors, Telemetry Hardware & Gateways">Sensors, Telemetry Hardware & Gateways</option>
-                  <option value="Rapid Tooling & Fabrication">Rapid Tooling & Fabrication</option>
-                  <option value="Pilot Testing Site & Distribution">Pilot Testing Site & Distribution</option>
+                  <option value="CSR Innovation Grant & Field Vehicle">CSR Innovation Grant &amp; Field Vehicle</option>
+                  <option value="Sensors, Telemetry Hardware & Gateways">Sensors, Telemetry Hardware &amp; Gateways</option>
+                  <option value="Rapid Tooling & Fabrication">Rapid Tooling &amp; Fabrication</option>
+                  <option value="Pilot Testing Site & Distribution">Pilot Testing Site &amp; Distribution</option>
                 </select>
               </div>
 
@@ -233,21 +234,21 @@ export default function IndustryPortal() {
                   type="text"
                   value={pledgeDetails.contribution}
                   onChange={(e) => setPledgeDetails({ ...pledgeDetails, contribution: e.target.value })}
-                  className="w-full p-2.5 border border-slate-300 rounded-lg"
+                  className="w-full p-2.5 border border-slate-200 rounded-xl bg-slate-50 text-slate-900 font-medium focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 focus:outline-none"
                 />
               </div>
             </div>
 
-            <div className="flex items-center justify-end space-x-2 pt-2 border-t border-slate-200">
+            <div className="flex items-center justify-end space-x-2 pt-4 border-t border-slate-100">
               <button
                 onClick={() => setSelectedProjectForPledge(null)}
-                className="px-3 py-1.5 text-xs text-slate-600 font-semibold"
+                className="px-4 py-2.5 text-xs text-slate-600 hover:text-slate-900 font-bold rounded-xl hover:bg-slate-50 cursor-pointer"
               >
                 Cancel
               </button>
               <button
                 onClick={() => handlePledgeSubmit(selectedProjectForPledge)}
-                className="bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-xs px-4 py-2 rounded-lg shadow cursor-pointer"
+                className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-5 py-2.5 rounded-xl shadow-md shadow-emerald-600/20 cursor-pointer transition-all hover:scale-105"
               >
                 Sign Partnership Memorandum
               </button>

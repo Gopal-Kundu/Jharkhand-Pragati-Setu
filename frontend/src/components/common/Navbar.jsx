@@ -35,7 +35,7 @@ export default function Navbar() {
               alt="Jharkhand Govt Emblem" 
               className="w-8 h-8 sm:w-10 sm:h-10 transition-transform group-hover:scale-105" 
             />
-            <span className="absolute -bottom-0.5 -right-0.5 w-2 sm:w-2.5 h-2 sm:h-2.5 rounded-full bg-emerald-500 ring-2 ring-white animate-pulse" />
+            
           </div>
           <div className="truncate">
             <span className="font-black text-base sm:text-xl text-slate-900 tracking-tight leading-none group-hover:text-emerald-700 transition-colors font-heading truncate block">
@@ -74,9 +74,11 @@ export default function Navbar() {
           {authState.isAuthenticated && authState.user ? (
             <div className="flex items-center space-x-2.5 bg-slate-50 border border-slate-200 px-3.5 py-1.5 rounded-xl shadow-sm">
               <div className="flex items-center space-x-1.5">
-                <UserCheck className="w-4 h-4 text-emerald-600" />
-                <span className="text-xs text-slate-800 font-bold">
-                  {authState.user.name.split(' ')[0]}
+                <UserCheck className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+                <span className="text-xs text-slate-800 font-bold max-w-[200px] truncate" title={authState.user.name}>
+                  {['university', 'industry', 'government', 'admin'].includes(authState.user.role)
+                    ? authState.user.name
+                    : (authState.user.name?.split(' ')[0] || authState.user.name)}
                 </span>
                 <span className="text-[10px] font-mono uppercase px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 font-bold border border-emerald-200">
                   {authState.user.role}

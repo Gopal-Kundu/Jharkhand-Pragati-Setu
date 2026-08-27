@@ -15,8 +15,7 @@ export default function MainLayout() {
     if (role === 'government') navigate('/dashboard');
     else if (role === 'university') navigate('/university');
     else if (role === 'industry') navigate('/industry');
-    else if (role === 'panchayat') navigate('/panchayat');
-    else navigate('/citizen');
+    else navigate('/community');
   };
 
   return (
@@ -58,8 +57,8 @@ export default function MainLayout() {
           <div>
             <h4 className="font-bold text-slate-900 text-xs uppercase tracking-wider mb-3 font-mono">Academic Innovation Hubs</h4>
             <ul className="space-y-1.5 text-slate-600 text-xs">
-              <li>• BIT Mesra Centre for Water Quality & IoT</li>
-              <li>• IIT (ISM) Dhanbad Geosciences & TexMin</li>
+              <li>• BIT Mesra Centre for Water Quality &amp; IoT</li>
+              <li>• IIT (ISM) Dhanbad Geosciences &amp; TexMin</li>
               <li>• Birsa Agricultural University (BAU) Kanke</li>
               <li>• NIT Jamshedpur Clean Energy Lab</li>
               <li>• RIMS Ranchi Tribal Health Hub</li>
@@ -67,7 +66,7 @@ export default function MainLayout() {
           </div>
 
           <div>
-            <h4 className="font-bold text-slate-900 text-xs uppercase tracking-wider mb-3 font-mono">Industry & CSR Partners</h4>
+            <h4 className="font-bold text-slate-900 text-xs uppercase tracking-wider mb-3 font-mono">Industry &amp; CSR Partners</h4>
             <ul className="space-y-1.5 text-slate-600 text-xs">
               <li>• Tata Steel Foundation (Jamshedpur)</li>
               <li>• Coal India Limited (CIL CSR Wing)</li>
@@ -82,13 +81,17 @@ export default function MainLayout() {
             <p className="text-slate-600 text-xs leading-relaxed">
               Toll Free Challenge Helpline: <strong className="text-emerald-700">1800-345-SIH26</strong><br />
               Email: <code className="bg-slate-100 text-emerald-800 px-1 py-0.5 rounded">innovation@jharkhand.gov.in</code><br />
-              Secretariat: Project Building, Dhurwa, Ranchi - 834004<br />
-              
+              Secretariat: Project Building, Dhurwa, Ranchi - 834004
             </p>
           </div>
         </div>
 
-        
+        {/* Global End Sub-Footer */}
+        <div className="max-w-7xl mx-auto mt-8 pt-6 border-t border-slate-200 text-center text-xs text-slate-700 font-medium flex items-center justify-center">
+          <span>
+            Smart India Hackathon project build by team <strong className="text-emerald-700 font-extrabold">HiveMind</strong>
+          </span>
+        </div>
       </footer>
     </div>
   );

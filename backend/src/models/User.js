@@ -54,6 +54,11 @@ const userSchema = new mongoose.Schema(
       type: String,
       default: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80'
     },
+    university: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'University',
+      default: null
+    },
     institutionDetails: {
       disciplines: [String],
       incubationCenter: String,
@@ -63,7 +68,21 @@ const userSchema = new mongoose.Schema(
       partnerType: String,
       csrBudget: Number,
       focusDomains: [String]
-    }
+    },
+    notifications: [
+      {
+        title: { type: String, required: true },
+        message: { type: String, required: true },
+        ticketId: { type: String, default: '' },
+        type: {
+          type: String,
+          enum: ['status_update', 'allocation', 'funding', 'resolution', 'general'],
+          default: 'status_update'
+        },
+        read: { type: Boolean, default: false },
+        createdAt: { type: Date, default: Date.now }
+      }
+    ]
   },
   {
     timestamps: true

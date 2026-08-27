@@ -17,6 +17,12 @@ export const problemApi = {
     return res.data;
   },
 
+  // Fetch problems submitted by currently logged-in user
+  getMyProblems: async () => {
+    const res = await apiClient.get('/problems/user/my');
+    return res.data;
+  },
+
   // Submit new problem with multimedia files (FormData)
   submitProblem: async (formData) => {
     const res = await apiClient.post('/problems', formData, {

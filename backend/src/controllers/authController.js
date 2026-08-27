@@ -212,9 +212,68 @@ export const getMe = async (req, res) => {
   }
 };
 
+/**
+ * @desc    Get all notifications for logged-in user
+ * @route   GET /api/auth/notifications
+ * @access  Private
+ */
+export const getUserNotifications = async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id).select('notifications');
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    const notifications = user.notifications || [];
+    const unreadCount = notifications.filter(n => !n.read).length;
+
+    return res.status(200).json({
+      success: true,
+      count: notifications.length,
+      unreadCount,
+      notifications: [...notifications].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+    });
+  } catch (error) {
+    console.error('[Get Notifications Error]:', error);
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+/**
+ * @desc    Mark all user notifications as read
+ * @route   PATCH /api/auth/notifications/read
+ * @access  Private
+ */
+export const markNotificationsAsRead = async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id);
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    if (user.notifications && user.notifications.length > 0) {
+      user.notifications.forEach(n => {
+        n.read = true;
+      });
+      await user.save();
+    }
+
+    return res.status(200).json({
+      success: true,
+      unreadCount: 0,
+      notifications: (user.notifications || []).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+    });
+  } catch (error) {
+    console.error('[Mark Notifications Read Error]:', error);
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 export default {
   register,
   login,
   logout,
-  getMe
+  getMe,
+  getUserNotifications,
+  markNotificationsAsRead
 };

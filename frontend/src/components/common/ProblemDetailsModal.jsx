@@ -205,16 +205,24 @@ export default function ProblemDetailsModal({ problemId, onClose }) {
                 </div>
               </div>
 
-              {/* Evidence Photo Banner */}
+              {/* Evidence Media Banner (Photo & Video Support) */}
               {problem.evidence && problem.evidence.length > 0 && (
                 <div className="rounded-3xl overflow-hidden border border-slate-200 shadow-md bg-slate-900 relative">
-                  <img
-                    src={problem.evidence[0].url}
-                    alt={problem.title}
-                    className="w-full h-72 sm:h-96 object-cover object-center"
-                  />
+                  {problem.evidence[0].type === 'video' || problem.evidence[0].url?.endsWith('.mp4') || problem.evidence[0].url?.includes('/video/') ? (
+                    <video
+                      src={problem.evidence[0].url}
+                      controls
+                      className="w-full max-h-96 object-contain bg-black"
+                    />
+                  ) : (
+                    <img
+                      src={problem.evidence[0].url}
+                      alt={problem.title}
+                      className="w-full h-72 sm:h-96 object-cover object-center"
+                    />
+                  )}
                   <div className="absolute bottom-3 left-3 bg-black/60 backdrop-blur-md px-3.5 py-1.5 rounded-xl text-white text-xs font-semibold border border-white/20">
-                    {problem.evidence[0].caption || 'Ground Site Photo'}
+                    {problem.evidence[0].caption || (problem.evidence[0].type === 'video' ? 'Ground Site Video Clip' : 'Ground Site Photo')}
                   </div>
                 </div>
               )}

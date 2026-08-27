@@ -2,10 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { useAppState } from '../context/StateContext';
 import GovernmentCommandCenter from '../components/government/GovernmentCommandCenter';
 import ProblemTriageQueue from '../components/government/ProblemTriageQueue';
-import { Building2, ShieldCheck, BarChart3 } from 'lucide-react';
+import TrackGovernmentChallenges from '../components/government/TrackGovernmentChallenges';
+import { Building2, ShieldCheck, BarChart3, Search } from 'lucide-react';
 
 export default function GovernmentPage() {
-  const [activeTab, setActiveTab] = useState('dashboard'); // 'dashboard' | 'triage'
+  const [activeTab, setActiveTab] = useState('dashboard'); // 'dashboard' | 'triage' | 'tracking'
   const { loadFullEcosystemData } = useAppState();
 
   useEffect(() => {
@@ -20,7 +21,7 @@ export default function GovernmentPage() {
           <div>
             <div className="flex items-center space-x-2 text-emerald-800 text-xs font-bold font-mono uppercase tracking-wider mb-1">
               <Building2 className="w-3.5 h-3.5 text-emerald-700" />
-              <span>Government of Jharkhand & State Innovation Council</span>
+              <span>Government of Jharkhand &amp; State Innovation Council</span>
             </div>
             <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 font-heading">Executive Command Center</h1>
             <p className="text-xs sm:text-sm text-slate-600 mt-1">
@@ -28,10 +29,10 @@ export default function GovernmentPage() {
             </p>
           </div>
 
-          <div className="flex items-center space-x-2 bg-slate-100 border border-slate-200 p-1.5 rounded-2xl shadow-inner">
+          <div className="flex flex-wrap items-center gap-1.5 bg-slate-100 border border-slate-200 p-1.5 rounded-2xl shadow-inner">
             <button
               onClick={() => setActiveTab('dashboard')}
-              className={`flex items-center space-x-1.5 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+              className={`flex items-center space-x-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                 activeTab === 'dashboard'
                   ? 'bg-emerald-600 text-white shadow-md'
                   : 'text-slate-600 hover:text-slate-900'
@@ -42,14 +43,25 @@ export default function GovernmentPage() {
             </button>
             <button
               onClick={() => setActiveTab('triage')}
-              className={`flex items-center space-x-1.5 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+              className={`flex items-center space-x-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                 activeTab === 'triage'
                   ? 'bg-emerald-600 text-white shadow-md'
                   : 'text-slate-600 hover:text-slate-900'
               }`}
             >
               <ShieldCheck className="w-3.5 h-3.5" />
-              <span>Triage & Allocation Queue</span>
+              <span>Triage &amp; Allocation</span>
+            </button>
+            <button
+              onClick={() => setActiveTab('tracking')}
+              className={`flex items-center space-x-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                activeTab === 'tracking'
+                  ? 'bg-emerald-600 text-white shadow-md'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              <Search className="w-3.5 h-3.5" />
+              <span>Track Challenges</span>
             </button>
           </div>
         </div>
@@ -57,7 +69,9 @@ export default function GovernmentPage() {
 
       {/* Main Government Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {activeTab === 'dashboard' ? <GovernmentCommandCenter /> : <ProblemTriageQueue />}
+        {activeTab === 'dashboard' && <GovernmentCommandCenter />}
+        {activeTab === 'triage' && <ProblemTriageQueue />}
+        {activeTab === 'tracking' && <TrackGovernmentChallenges />}
       </div>
     </div>
   );

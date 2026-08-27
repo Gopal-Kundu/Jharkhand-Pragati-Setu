@@ -1,0 +1,105 @@
+import mongoose from 'mongoose';
+
+/**
+ * Proposal Schema
+ * Represents an R&D and field implementation proposal created by a University for a specific Problem Statement
+ */
+const proposalSchema = new mongoose.Schema(
+  {
+    problem: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Problem',
+      required: [true, 'Problem reference is required'],
+      index: true
+    },
+    university: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'University',
+      required: [true, 'University reference is required'],
+      index: true
+    },
+    title: {
+      type: String,
+      required: [true, 'Proposal title is required'],
+      trim: true
+    },
+    problemStatement: {
+      type: String,
+      required: [true, 'Problem statement is required']
+    },
+    description: {
+      type: String,
+      required: [true, 'Proposal description & technical methodology are required']
+    },
+    facultyMembers: [
+      {
+        name: { type: String, required: true },
+        designation: { type: String, default: 'Professor & Lead PI' },
+        department: { type: String, default: 'Engineering' },
+        email: { type: String, default: '' }
+      }
+    ],
+    teamMembers: [
+      {
+        name: { type: String, required: true },
+        rollNo: { type: String, default: '' },
+        branch: { type: String, default: 'Engineering' },
+        year: { type: String, default: 'Final Year' }
+      }
+    ],
+    projectDuration: {
+      type: String,
+      required: true,
+      default: '6 Months'
+    },
+    estimatedBudget: {
+      type: Number,
+      default: 500000
+    },
+    industrySupportRequired: [
+      {
+        type: String,
+        enum: [
+          'IoT & Embedded Sensors',
+          'Water Supply & Sluice Gate Fabrication',
+          'Solar & Microgrid Hardware',
+          'Drone & Aerial Survey',
+          'Chemical & Water Quality Testing Kit',
+          'Cloud & AI Compute Infrastructure',
+          'Field Trial Vehicles & Logistics',
+          'Rapid Prototyping & Metal 3D Printing',
+          'Civil & Concrete Encapsulation',
+          'Agritech Sensor Nodes',
+          'Other Industry Support'
+        ],
+        default: 'IoT & Embedded Sensors'
+      }
+    ],
+    assignedIndustry: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'IndustryPartner',
+      default: null
+    },
+    aiMatchedIndustry: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'IndustryPartner',
+      default: null
+    },
+    status: {
+      type: String,
+      enum: ['submitted', 'ai_triaged', 'industry_matched', 'industry_funded', 'in_progress', 'completed'],
+      default: 'submitted'
+    },
+    aiAnalysis: {
+      matchedRationale: { type: String, default: '' },
+      confidence: { type: Number, default: 0.92 },
+      suggestedFundingRange: { type: String, default: '₹5,00,000 - ₹12,00,000' }
+    }
+  },
+  {
+    timestamps: true
+  }
+);
+
+export const Proposal = mongoose.model('Proposal', proposalSchema);
+export default Proposal;

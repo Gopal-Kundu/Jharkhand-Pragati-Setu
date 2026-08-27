@@ -39,8 +39,7 @@ export default function AuthPage() {
         if (userRole === 'government') navigate('/dashboard');
         else if (userRole === 'university') navigate('/university');
         else if (userRole === 'industry') navigate('/industry');
-        else if (userRole === 'panchayat') navigate('/panchayat');
-        else navigate('/citizen');
+        else navigate('/community');
       } else {
         toast.error(result.payload || 'Invalid email or password');
       }
@@ -48,8 +47,12 @@ export default function AuthPage() {
       const result = await dispatch(registerUser(formData));
       if (registerUser.fulfilled.match(result)) {
         toast.success(`Account registered successfully as ${formData.role}!`);
-        dispatch(setActiveRole(formData.role));
-        navigate('/citizen');
+        const registeredRole = result.payload?.role || formData.role;
+        dispatch(setActiveRole(registeredRole));
+        if (registeredRole === 'government') navigate('/dashboard');
+        else if (registeredRole === 'university') navigate('/university');
+        else if (registeredRole === 'industry') navigate('/industry');
+        else navigate('/community');
       } else {
         toast.error(result.payload || 'Registration failed');
       }

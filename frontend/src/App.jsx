@@ -10,8 +10,7 @@ import ErrorBoundary from './components/common/ErrorBoundary';
 // Layout & Pages
 import MainLayout from './components/layout/MainLayout';
 import LandingPage from './pages/LandingPage';
-import CitizenPage from './pages/CitizenPage';
-import PanchayatPage from './pages/PanchayatPage';
+import CommunityPage from './pages/CommunityPage';
 import GovernmentPage from './pages/GovernmentPage';
 import UniversityPage from './pages/UniversityPage';
 import IndustryPage from './pages/IndustryPage';
@@ -22,7 +21,7 @@ function AppRouter() {
   const dispatch = useDispatch();
 
   useEffect(() => {
-    // Call ONLY 2 APIs on initial landing page load:
+    // Call ONLY 2 targeted APIs on initial landing page load:
     // 1. fetchSolvedChallenges(6) -> GET /api/problems?resolutionStatus=solved&limit=6
     // 2. fetchCurrentUser() -> GET /api/auth/me
     dispatch(fetchSolvedChallenges(6));
@@ -36,11 +35,12 @@ function AppRouter() {
           {/* Landing / Overview */}
           <Route index element={<LandingPage />} />
 
-          {/* Citizen & Community Portal */}
-          <Route path="citizen" element={<CitizenPage />} />
+          {/* Unified Community & PRI Panchayat Portal */}
+          <Route path="community" element={<CommunityPage />} />
 
-          {/* Panchayati Raj & ULB Portal */}
-          <Route path="panchayat" element={<PanchayatPage />} />
+          {/* Backward compatibility redirects */}
+          <Route path="citizen" element={<Navigate to="/community" replace />} />
+          <Route path="panchayat" element={<Navigate to="/community" replace />} />
 
           {/* Government Command Center & AI Triage */}
           <Route path="dashboard" element={<GovernmentPage />} />

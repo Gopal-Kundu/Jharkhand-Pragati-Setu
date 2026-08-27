@@ -27,6 +27,18 @@ export const authApi = {
   getMe: async () => {
     const res = await apiClient.get('/auth/me');
     return res.data;
+  },
+
+  // Get user notifications & unread count
+  getNotifications: async () => {
+    const res = await apiClient.get('/auth/notifications');
+    return res.data;
+  },
+
+  // Mark all notifications as read
+  markNotificationsAsRead: async () => {
+    const res = await apiClient.patch('/auth/notifications/read');
+    return res.data;
   }
 };
 
