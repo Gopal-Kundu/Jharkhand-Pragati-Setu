@@ -1,5 +1,4 @@
 // AI Problem Intelligence & Matching Engine for Jharkhand Pragati Setu
-import { HEI_INSTITUTIONS, INDUSTRY_PARTNERS } from '../data/mockGraphData';
 
 const DOMAIN_KEYWORDS = {
   'Water Resources': ['water', 'pond', 'irrigation', 'drinking water', 'well', 'tubewell', 'fluoride', 'arsenic', 'dam', 'handpump', 'jal', 'scarcity', 'drought', 'silt', 'recharge', 'catchment'],
@@ -93,7 +92,12 @@ export function analyzeProblemSubmission(submission, existingClusters = []) {
   const prioritizationScore = Math.min(98, popScore + urgencyWeight + duplicateWeight + sdgWeight + feasScore);
 
   // 5. University Capability Matching
-  const universityMatches = HEI_INSTITUTIONS.map(hei => {
+  const defaultHeis = [
+    { id: 'bit_mesra', name: 'Birla Institute of Technology (BIT) Mesra', shortName: 'BIT Mesra', capabilities: ['Civil', 'Water', 'IoT', 'Biotech', 'Environmental'], labs: ['Water Tech Lab'], location: 'Ranchi', pastSuccessRate: '92%' },
+    { id: 'iit_ism_dhanbad', name: 'IIT (ISM) Dhanbad', shortName: 'IIT ISM', capabilities: ['Mining', 'Geo-Engineering', 'Environment', 'Sensors'], labs: ['Mine Fire Lab'], location: 'Dhanbad', pastSuccessRate: '94%' },
+    { id: 'bau_ranchi', name: 'Birsa Agricultural University', shortName: 'BAU', capabilities: ['Agriculture', 'Forestry', 'Soil', 'Pest'], labs: ['Agri Lab'], location: 'Ranchi', pastSuccessRate: '88%' }
+  ];
+  const universityMatches = defaultHeis.map(hei => {
     let score = 60;
     const heiCaps = hei.capabilities.join(' ').toLowerCase();
     
@@ -104,7 +108,7 @@ export function analyzeProblemSubmission(submission, existingClusters = []) {
       });
     });
 
-    if (hei.district === submission.district) score += 8; // Geographic proximity bonus
+    if (hei.district === submission.district) score += 8;
 
     const finalScore = Math.min(97, Math.max(65, score));
     return {
@@ -122,7 +126,11 @@ export function analyzeProblemSubmission(submission, existingClusters = []) {
   }).sort((a, b) => b.matchScore - a.matchScore);
 
   // 6. Industry Partner Recommendations
-  const industryMatches = INDUSTRY_PARTNERS.map(partner => {
+  const defaultPartners = [
+    { id: 'tata_steel', name: 'Tata Steel Foundation', shortName: 'Tata Steel', focusAreas: ['Water Resources', 'Agriculture', 'Healthcare'], pledgeCapacity: '₹15L - ₹25L', offeredResources: ['Prototyping Grant', 'Engineers'] },
+    { id: 'coal_india', name: 'Coal India Limited CSR', shortName: 'Coal India', focusAreas: ['Environment', 'Energy', 'Urban'], pledgeCapacity: '₹20L - ₹30L', offeredResources: ['Field Testing', 'Hardware'] }
+  ];
+  const industryMatches = defaultPartners.map(partner => {
     let fitScore = 70;
     const focusStr = partner.focusAreas.join(' ').toLowerCase();
     if (focusStr.includes(primaryDomain.toLowerCase()) || focusStr.includes('water') && isWater) fitScore += 20;

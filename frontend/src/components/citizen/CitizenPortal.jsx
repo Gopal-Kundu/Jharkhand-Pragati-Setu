@@ -36,18 +36,19 @@ export default function CitizenPortal() {
 
   const domains = ['All', 'Water Resources', 'Agriculture', 'Healthcare', 'Education', 'Environment'];
 
-  const filteredClusters = problemClusters.filter(c => {
+  const filteredClusters = (problemClusters || []).filter(c => {
+    if (!c) return false;
     if (filterDomain === 'All') return true;
-    return c.primaryDomain === filterDomain || (c.secondaryDomains && c.secondaryDomains.includes(filterDomain));
+    return c.primaryDomain === filterDomain || c.domain === filterDomain || (c.secondaryDomains && c.secondaryDomains.includes(filterDomain));
   });
 
   const handleTrackSubmit = (e) => {
     e.preventDefault();
     if (!trackQuery.trim()) return;
     const clean = trackQuery.trim().toUpperCase().replace('#', '');
-    const found = problemClusters.find(c => c.id.includes(clean) || (c.reports && c.reports.some(r => r.phone && r.phone.includes(clean))));
+    const found = (problemClusters || []).find(c => c?.id?.includes(clean) || c?.ticketId?.includes(clean) || (c?.reports && c.reports.some(r => r?.phone && r.phone.includes(clean))));
     if (found) {
-      setSelectedClusterId(found.id);
+      setSelectedClusterId(found.ticketId || found.id);
       setActiveView('cluster_detail');
     } else {
       setSelectedClusterId('JH-WTR-1042');
@@ -55,7 +56,7 @@ export default function CitizenPortal() {
     }
   };
 
-  const torpaCluster = problemClusters.find(c => c.id === 'JH-WTR-1042') || problemClusters[0];
+  const torpaCluster = (problemClusters || []).find(c => c?.id === 'JH-WTR-1042' || c?.ticketId === 'JH-WTR-1042') || (problemClusters && problemClusters[0]);
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 animate-in fade-in">

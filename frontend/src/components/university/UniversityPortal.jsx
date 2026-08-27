@@ -55,21 +55,22 @@ export default function UniversityPortal() {
     mediaUrl: 'https://images.unsplash.com/photo-1581092160607-ee22621dd758?auto=format&fit=crop&w=800&q=80'
   });
 
-  const currentHei = heis.find(h => h.id === activeHeiId) || heis[0];
+  const currentHei = (heis || []).find(h => h?.id === activeHeiId) || (heis && heis[0]) || { id: 'bit_mesra', name: 'Birla Institute of Technology (BIT) Mesra', shortName: 'BIT Mesra', location: 'Ranchi' };
 
   // Matched / Assigned problems for this college
-  const allCollegeProblems = problemClusters.filter(c => {
+  const allCollegeProblems = (problemClusters || []).filter(c => {
+    if (!c) return false;
     return c.allocatedHeiId === activeHeiId || 
-           c.allocatedHei?.includes(currentHei.shortName) || 
-           c.institutionMatches?.some(m => m.heiId === activeHeiId) || 
-           c.project?.leadInstitution?.includes(currentHei.shortName);
+           c.allocatedHei?.includes(currentHei?.shortName) || 
+           c.institutionMatches?.some(m => m?.heiId === activeHeiId) || 
+           c.project?.leadInstitution?.includes(currentHei?.shortName);
   });
 
   // Incoming problems sent by normal citizens needing college approval
-  const incomingProblems = allCollegeProblems.filter(c => c.status === 'Submitted' || c.status === 'Sent to College R&D' || c.status === 'Under Review');
+  const incomingProblems = allCollegeProblems.filter(c => c?.status === 'Submitted' || c?.status === 'Sent to College R&D' || c?.status === 'Under Review');
 
   // Active in-progress R&D projects
-  const activeProjects = allCollegeProblems.filter(c => c.status === 'In College R&D' || c.status === 'Prototype' || c.status === 'Pilot' || c.status === 'Proposal Submitted' || c.status === 'Industry Joined');
+  const activeProjects = allCollegeProblems.filter(c => c?.status === 'In College R&D' || c?.status === 'Prototype' || c?.status === 'Pilot' || c?.status === 'Proposal Submitted' || c?.status === 'Industry Joined');
 
   const handleOpenApproveModal = (cluster) => {
     setSelectedClusterForApproval(cluster);
@@ -79,8 +80,8 @@ export default function UniversityPortal() {
   const handleConfirmApproval = () => {
     if (!selectedClusterForApproval) return;
     approveAndAcceptProblem(
-      selectedClusterForApproval.id,
-      currentHei.name,
+      selectedClusterForApproval.id || selectedClusterForApproval.ticketId,
+      currentHei?.name || 'BIT Mesra',
       approvalForm.facultyLead,
       approvalForm.studentTeam
     );
@@ -94,7 +95,7 @@ export default function UniversityPortal() {
     setSelectedClusterForUpdate(cluster);
     setUpdateForm(prev => ({
       ...prev,
-      author: cluster.project?.leadFaculty || `${currentHei.shortName} Project Lead`,
+      author: cluster?.project?.leadFaculty || `${currentHei?.shortName || 'HEI'} Project Lead`,
       message: ''
     }));
     setIsUpdateModalOpen(true);
@@ -102,7 +103,7 @@ export default function UniversityPortal() {
 
   const handlePostUpdate = () => {
     if (!selectedClusterForUpdate || !updateForm.message.trim()) return;
-    addCollegeProgressUpdate(selectedClusterForUpdate.id, updateForm);
+    addCollegeProgressUpdate(selectedClusterForUpdate.id || selectedClusterForUpdate.ticketId, updateForm);
     setIsUpdateModalOpen(false);
     try {
       confetti({ particleCount: 70, spread: 60 });
@@ -120,10 +121,10 @@ export default function UniversityPortal() {
               <span>COLLEGE AUTHORITY & UNIVERSITY R&D COMMAND</span>
             </div>
             <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-white">
-              {currentHei.name}
+              {currentHei?.name || 'Higher Education Institution'}
             </h1>
             <p className="text-xs text-purple-200/90 max-w-2xl">
-              {currentHei.location} • AI-Matched Grassroots Pipeline • Total Active Citizen Challenges: <strong>{allCollegeProblems.length}</strong>
+              {currentHei?.location || 'Jharkhand'} • AI-Matched Grassroots Pipeline • Total Active Citizen Challenges: <strong>{allCollegeProblems.length}</strong>
             </p>
           </div>
 
@@ -137,8 +138,8 @@ export default function UniversityPortal() {
               onChange={(e) => setActiveHeiId(e.target.value)}
               className="bg-purple-900/90 text-white font-bold text-xs p-2 rounded-xl border border-purple-400 focus:outline-none cursor-pointer"
             >
-              {heis.map(h => (
-                <option key={h.id} value={h.id}>{h.shortName} ({h.location})</option>
+              {(heis || []).map(h => (
+                <option key={h?.id || Math.random()} value={h?.id}>{h?.shortName || h?.name} ({h?.location || 'Jharkhand'})</option>
               ))}
             </select>
           </div>

@@ -33,13 +33,23 @@ export default function IndustryPortal() {
     contribution: '₹12,50,000 Direct Grant + Galvanized Sluice Fabrication'
   });
 
-  const currentPartner = industryPartners.find(p => p.id === activePartnerId) || industryPartners[0];
+  const currentPartner = (industryPartners || []).find(p => p?.id === activePartnerId) || (industryPartners && industryPartners[0]) || {
+    id: 'tata_steel_csr',
+    name: 'Tata Steel Foundation CSR Wing',
+    shortName: 'Tata Steel CSR',
+    category: 'Enterprise CSR Foundation',
+    hq: 'Jamshedpur',
+    pledgeCapacity: '₹12.5 Cr',
+    offeredResources: ['Rapid Prototype Fabrication', 'Matching CSR Grants', 'Corporate Mentors', 'Field Trial Vehicles']
+  };
 
   // Active projects seeking industry collaboration
-  const projectsSeekingIndustry = problemClusters.filter(c => c.project);
+  const projectsSeekingIndustry = (problemClusters || []).filter(c => c?.project);
 
   const handlePledgeSubmit = (clusterId) => {
-    pledgeIndustryPartner(clusterId, activePartnerId, pledgeDetails);
+    if (pledgeIndustryPartner) {
+      pledgeIndustryPartner(clusterId, currentPartner?.name || 'Tata Steel Foundation', 1250000);
+    }
     setSelectedProjectForPledge(null);
     try {
       confetti({ particleCount: 90, spread: 70 });
@@ -57,10 +67,10 @@ export default function IndustryPortal() {
               <span>Corporate CSR, Startup & Industry Innovation Exchange</span>
             </div>
             <h1 className="text-xl sm:text-3xl font-extrabold tracking-tight">
-              {currentPartner.name}
+              {currentPartner?.name || 'Corporate CSR Partner'}
             </h1>
             <p className="text-xs text-amber-200/80">
-              {currentPartner.category} • HQ: {currentPartner.hq} • Committed CSR Pool: <strong>{currentPartner.pledgeCapacity}</strong>
+              {currentPartner?.category || 'CSR Foundation'} • HQ: {currentPartner?.hq || 'Jharkhand'} • Committed CSR Pool: <strong>{currentPartner?.pledgeCapacity || '₹10 Cr'}</strong>
             </p>
           </div>
 
@@ -74,8 +84,8 @@ export default function IndustryPortal() {
               onChange={(e) => setActivePartnerId(e.target.value)}
               className="bg-amber-900/90 text-white font-bold text-xs p-2 rounded-xl border border-amber-400 focus:outline-none"
             >
-              {industryPartners.map(p => (
-                <option key={p.id} value={p.id}>{p.shortName}</option>
+              {(industryPartners || []).map(p => (
+                <option key={p?.id || Math.random()} value={p?.id}>{p?.shortName || p?.name}</option>
               ))}
             </select>
           </div>
@@ -87,7 +97,7 @@ export default function IndustryPortal() {
             CSR Mandate & Resources Available for Deployment:
           </span>
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2 text-xs">
-            {currentPartner.offeredResources.map((res, i) => (
+            {(currentPartner?.offeredResources || []).map((res, i) => (
               <div key={i} className="bg-amber-950/60 border border-amber-800/60 p-2.5 rounded-xl text-amber-100 font-medium">
                 {res}
               </div>

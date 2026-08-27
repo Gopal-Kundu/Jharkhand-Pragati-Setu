@@ -1,0 +1,112 @@
+import express from 'express';
+import cors from 'cors';
+import cookieParser from 'cookie-parser';
+import dotenv from 'dotenv';
+import connectDB from './db/connect.js';
+import Problem from './models/Problem.js';
+
+// Route imports
+import authRoutes from './routes/authRoutes.js';
+import problemRoutes from './routes/problemRoutes.js';
+import aiRoutes from './routes/aiRoutes.js';
+import analyticsRoutes from './routes/analyticsRoutes.js';
+import universityRoutes from './routes/universityRoutes.js';
+import industryRoutes from './routes/industryRoutes.js';
+import emailRoutes from './routes/emailRoutes.js';
+
+// Load environment variables from .env
+dotenv.config();
+
+const app = express();
+const PORT = process.env.PORT || 5000;
+const CLIENT_URL = process.env.CLIENT_URL || 'http://localhost:5173';
+
+// 1. CORS Configuration (Allows credentials for secure HTTP-Only cookies)
+app.use(
+  cors({
+    origin: [CLIENT_URL, 'http://localhost:5173', 'http://127.0.0.1:5173'],
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
+  })
+);
+
+// 2. Body Parsing Middleware
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+
+// 3. Cookie Parser Middleware for HTTP-Only Auth tokens
+app.use(cookieParser());
+
+// 4. API Health Check Endpoint
+app.get('/api/health', (req, res) => {
+  res.status(200).json({
+    status: 'online',
+    platform: 'SIH 2026 Societal Problem-to-Innovation Ecosystem',
+    aiModel: process.env.GEMINI_MODEL || 'gemini-3.1-flash-lite',
+    timestamp: new Date().toISOString()
+  });
+});
+
+// 4.1 Maps & GIS Configuration Endpoint
+app.get('/api/config/maps', (req, res) => {
+  res.status(200).json({
+    success: true,
+    mapsApiKey: process.env.MAPS_API_KEY || process.env.VITE_MAPS_API_KEY || '',
+    tileLayer: process.env.MAP_TILE_LAYER || 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+    defaultCenter: { lat: 23.6102, lng: 85.2799 }, // Jharkhand State Geographical Centroid
+    defaultZoom: 8
+  });
+});
+
+// 5. Mount API Route Handlers
+app.use('/api/auth', authRoutes);
+app.use('/api/problems', problemRoutes);
+app.use('/api/ai', aiRoutes);
+app.use('/api/analytics', analyticsRoutes);
+app.use('/api/universities', universityRoutes);
+app.use('/api/industry', industryRoutes);
+app.use('/api/notifications', emailRoutes);
+
+// 6. Global 404 Route Handler
+app.use((req, res) => {
+  res.status(404).json({
+    success: false,
+    message: `API endpoint not found: ${req.method} ${req.originalUrl}`
+  });
+});
+
+// 7. Global Error Handler Middleware
+app.use((err, req, res, next) => {
+  console.error('[Unhandled Server Error]:', err);
+  res.status(err.status || 500).json({
+    success: false,
+    message: err.message || 'Internal Server Error'
+  });
+});
+
+/**
+ * Start Server Function
+ * Awaits MongoDB connection BEFORE listening on the HTTP port as requested.
+ */
+const startServer = async () => {
+  try {
+    console.log('[Startup] Connecting to MongoDB database...');
+    // Await MongoDB connection before binding to port
+    await connectDB();
+
+    // Start listening on HTTP port
+    app.listen(PORT, () => {
+      console.log(`=======================================================`);
+      console.log(`🚀 SIH 2026 Backend Running on http://localhost:${PORT}`);
+      console.log(`⚡ AI Model: ${process.env.GEMINI_MODEL || 'gemini-3.1-flash-lite'}`);
+      console.log(`🔒 Auth: Secure HTTP-Only Cookies enabled`);
+      console.log(`=======================================================`);
+    });
+  } catch (error) {
+    console.error('[Fatal Startup Error]: Failed to start backend server:', error.message);
+    process.exit(1);
+  }
+};
+
+startServer();

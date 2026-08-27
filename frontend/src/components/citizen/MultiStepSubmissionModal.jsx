@@ -1,6 +1,9 @@
 import React, { useState, useRef } from 'react';
 import { useAppState } from '../../context/StateContext';
+import { aiApi } from '../../services/aiApi';
 import { analyzeProblemSubmission } from '../../services/aiIntelligenceEngine';
+import InteractiveMapPicker from '../common/InteractiveMapPicker';
+import MarkdownRenderer from '../common/MarkdownRenderer';
 import { 
   X, 
   Sparkles, 
@@ -129,15 +132,46 @@ export default function MultiStepSubmissionModal() {
     }, 2000);
   };
 
-  // Run AI analysis on step 4 transition
-  const handleProceedToReview = () => {
-    const preview = analyzeProblemSubmission(formData, []);
-    setAiPreview(preview);
+  // Run AI analysis on step 4 transition via backend AI API
+  const handleProceedToReview = async () => {
+    try {
+      const response = await aiApi.categorizeProblem({
+        title: formData.title || `${formData.narrative.slice(0, 50)}...`,
+        description: formData.narrative,
+        location: { district: formData.districtName, block: formData.block },
+        submitterRole: formData.submitterType
+      });
+      if (response.success && response.data) {
+        const aiData = response.data;
+        setAiPreview({
+          primaryDomain: aiData.domain,
+          secondaryDomains: aiData.tags || [],
+          suggestedProjectTitle: `${aiData.domain} Innovation Intervention in ${formData.districtName}`,
+          suggestedProjectTitleHi: `${formData.districtName} में ${aiData.domain} नवाचार पहल`,
+          severity: aiData.urgency || 'High',
+          urgencyScore: `${aiData.severity || 8.5}/10`,
+          universityMatches: (aiData.recommendedUniversities || []).map(u => ({
+            heiId: u.universityId,
+            name: u.name,
+            matchScore: u.matchScore,
+            reason: u.reason
+          })),
+          duplicatesFound: aiData.duplicateCheck?.isDuplicate ? [aiData.duplicateCheck] : [],
+          recommendedDisciplines: aiData.recommendedDisciplines || []
+        });
+      } else {
+        const preview = analyzeProblemSubmission(formData, []);
+        setAiPreview(preview);
+      }
+    } catch (err) {
+      const preview = analyzeProblemSubmission(formData, []);
+      setAiPreview(preview);
+    }
     setStep(5);
   };
 
-  const handleFinalSubmit = () => {
-    const res = submitCitizenProblem(formData);
+  const handleFinalSubmit = async () => {
+    const res = await submitCitizenProblem(formData);
     setSubmissionResult(res);
     try {
       confetti({ particleCount: 80, spread: 70, origin: { y: 0.6 } });
@@ -480,19 +514,9 @@ export default function MultiStepSubmissionModal() {
                 </div>
               )}
 
-              {/* STEP 3: Location */}
+              {/* STEP 3: Interactive Map & Geographic Pinpoint */}
               {step === 3 && (
                 <div className="space-y-3.5 animate-in fade-in">
-                  <div className="bg-emerald-50/60 p-3 rounded-xl border border-emerald-200 text-xs flex items-center justify-between">
-                    <div className="flex items-center space-x-2">
-                      <MapPin className="w-4 h-4 text-emerald-700" />
-                      <span className="font-semibold text-emerald-950">GPS Auto-Location Detected</span>
-                    </div>
-                    <span className="text-[11px] font-mono font-bold text-emerald-800">
-                      {formData.gps.lat.toFixed(4)}° N, {formData.gps.lng.toFixed(4)}° E
-                    </span>
-                  </div>
-
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
                       <label className="block text-xs font-bold text-slate-700 mb-1">District</label>
@@ -521,20 +545,41 @@ export default function MultiStepSubmissionModal() {
                     </div>
                   </div>
 
+                  {/* Interactive Leaflet GPS Map Pinpoint */}
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">
+                      Interactive GPS Map Pinpoint & Live Geolocation:
+                    </label>
+                    <InteractiveMapPicker
+                      initialLat={formData.gps.lat}
+                      initialLng={formData.gps.lng}
+                      districtName={formData.districtName}
+                      blockName={formData.block}
+                      onLocationChange={({ lat, lng }) => {
+                        setFormData(prev => ({
+                          ...prev,
+                          gps: { lat, lng }
+                        }));
+                      }}
+                    />
+                  </div>
+
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
                       <label className="block text-xs font-bold text-slate-700 mb-1">Panchayat / Urban Ward</label>
                       <input
                         type="text"
+                        placeholder="e.g. Dormba Panchayat"
                         value={formData.panchayat}
                         onChange={(e) => setFormData({ ...formData, panchayat: e.target.value })}
                         className="w-full text-xs p-2.5 rounded-lg border border-slate-300 text-slate-900 bg-white placeholder:text-slate-400 font-medium focus:ring-2 focus:ring-emerald-500 focus:outline-none"
                       />
                     </div>
                     <div>
-                      <label className="block text-xs font-bold text-slate-700 mb-1">Village / Tola</label>
+                      <label className="block text-xs font-bold text-slate-700 mb-1">Village / Tola / Street Landmark</label>
                       <input
                         type="text"
+                        placeholder="e.g. Near Primary School Well"
                         value={formData.village}
                         onChange={(e) => setFormData({ ...formData, village: e.target.value })}
                         className="w-full text-xs p-2.5 rounded-lg border border-slate-300 text-slate-900 bg-white placeholder:text-slate-400 font-medium focus:ring-2 focus:ring-emerald-500 focus:outline-none"
@@ -614,7 +659,9 @@ export default function MultiStepSubmissionModal() {
                   {/* Structuring Breakdown */}
                   <div className="bg-slate-50 rounded-xl p-3 border border-slate-200 space-y-2 text-xs">
                     <h5 className="font-bold text-slate-800">Root Cause Hypothesis:</h5>
-                    <p className="text-slate-700 text-[11px] leading-relaxed">{aiPreview.rootProblem}</p>
+                    <div className="text-slate-700 text-[11px] leading-relaxed">
+                      <MarkdownRenderer content={aiPreview.rootProblem} />
+                    </div>
 
                     <h5 className="font-bold text-slate-800 pt-1">Required Academic Disciplines:</h5>
                     <div className="flex flex-wrap gap-1">

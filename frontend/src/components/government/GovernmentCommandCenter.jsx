@@ -109,25 +109,25 @@ export default function GovernmentCommandCenter() {
           </div>
 
           <div className="space-y-3">
-            {govDepartments.map((dept) => (
-              <div key={dept.id} className="bg-slate-50 p-4 rounded-2xl border border-slate-200 hover:border-indigo-300 transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+            {(govDepartments || []).map((dept) => (
+              <div key={dept?.id || Math.random()} className="bg-slate-50 p-4 rounded-2xl border border-slate-200 hover:border-indigo-300 transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
                 <div className="space-y-1 max-w-md">
-                  <h4 className="font-extrabold text-slate-900 text-sm">{dept.name}</h4>
-                  <span className="text-[11px] text-slate-500 block">{dept.minister}</span>
+                  <h4 className="font-extrabold text-slate-900 text-sm">{dept?.name || 'Department'}</h4>
+                  <span className="text-[11px] text-slate-500 block">{dept?.minister || 'Secretariat Lead'}</span>
                 </div>
 
                 <div className="flex items-center space-x-4">
                   <div className="text-center">
                     <span className="text-[10px] text-slate-400 block">Challenges</span>
-                    <strong className="text-slate-900 font-bold text-sm">{dept.activeChallenges}</strong>
+                    <strong className="text-slate-900 font-bold text-sm">{dept?.activeChallenges ?? 0}</strong>
                   </div>
                   <div className="text-center">
                     <span className="text-[10px] text-slate-400 block">Allocated Projects</span>
-                    <strong className="text-indigo-700 font-bold text-sm">{dept.allocatedProjects}</strong>
+                    <strong className="text-indigo-700 font-bold text-sm">{dept?.allocatedProjects ?? 0}</strong>
                   </div>
                   <div className="text-center">
                     <span className="text-[10px] text-slate-400 block">Budget Mobilized</span>
-                    <strong className="text-emerald-700 font-bold text-sm">{dept.budgetMobilized}</strong>
+                    <strong className="text-emerald-700 font-bold text-sm">{dept?.budgetMobilized || '₹0'}</strong>
                   </div>
                 </div>
               </div>
@@ -143,36 +143,39 @@ export default function GovernmentCommandCenter() {
           </div>
 
           <div className="space-y-3">
-            {problemClusters.slice(0, 3).map((cl) => (
-              <div
-                key={cl.id}
-                onClick={() => {
-                  setSelectedClusterId(cl.id);
-                  setActiveView('cluster_detail');
-                }}
-                className="p-3.5 bg-slate-50 hover:bg-indigo-50 rounded-2xl border border-slate-200 hover:border-indigo-300 transition-all cursor-pointer space-y-1.5 text-xs group"
-              >
-                <div className="flex justify-between items-center">
-                  <span className="font-mono text-[10px] font-bold text-indigo-900 bg-white px-2 py-0.5 rounded border border-indigo-200">
-                    #{cl.id}
-                  </span>
-                  <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded ${
-                    cl.severity === 'Critical' ? 'bg-red-100 text-red-800' : 'bg-amber-100 text-amber-800'
-                  }`}>
-                    {cl.severity} Priority
-                  </span>
-                </div>
+            {(problemClusters || []).slice(0, 3).map((cl) => {
+              const clusterId = cl?.ticketId || cl?.id || 'CL-01';
+              return (
+                <div
+                  key={clusterId}
+                  onClick={() => {
+                    setSelectedClusterId(clusterId);
+                    setActiveView('cluster_detail');
+                  }}
+                  className="p-3.5 bg-slate-50 hover:bg-indigo-50 rounded-2xl border border-slate-200 hover:border-indigo-300 transition-all cursor-pointer space-y-1.5 text-xs group"
+                >
+                  <div className="flex justify-between items-center">
+                    <span className="font-mono text-[10px] font-bold text-indigo-900 bg-white px-2 py-0.5 rounded border border-indigo-200">
+                      #{clusterId}
+                    </span>
+                    <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded ${
+                      cl?.severity === 'Critical' ? 'bg-red-100 text-red-800' : 'bg-amber-100 text-amber-800'
+                    }`}>
+                      {cl?.severity || 'High'} Priority
+                    </span>
+                  </div>
 
-                <h5 className="font-bold text-slate-900 group-hover:text-indigo-800 leading-snug">
-                  {cl.title}
-                </h5>
+                  <h5 className="font-bold text-slate-900 group-hover:text-indigo-800 leading-snug">
+                    {cl?.title || 'Societal Problem Statement'}
+                  </h5>
 
-                <div className="flex justify-between items-center text-[10px] text-slate-500 pt-1">
-                  <span>{cl.districtName} ({cl.block} Block)</span>
-                  <span className="text-indigo-700 font-bold">Inspect &rarr;</span>
+                  <div className="flex justify-between items-center text-[10px] text-slate-500 pt-1">
+                    <span>{cl?.districtName || cl?.location?.district || 'Jharkhand'} ({cl?.block || cl?.location?.block || 'Sadar'} Block)</span>
+                    <span className="text-indigo-700 font-bold">Inspect &rarr;</span>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
 
           <button

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useAppState } from '../../context/StateContext';
+import MarkdownRenderer from '../common/MarkdownRenderer';
 import { 
   ShieldCheck, 
   Sparkles, 
@@ -86,8 +87,8 @@ export default function ProblemTriageQueue() {
               onChange={(e) => setSelectedHeiForAllocation(e.target.value)}
               className="w-full bg-slate-800 border border-slate-700 text-white rounded-xl p-2.5 font-bold focus:ring-2 focus:ring-emerald-400 focus:outline-none"
             >
-              {heis.map(h => (
-                <option key={h.id} value={h.id}>{h.name} ({h.location})</option>
+              {(heis || []).map(h => (
+                <option key={h?.id || Math.random()} value={h?.id}>{h?.name || 'HEI'} ({h?.location || 'Jharkhand'})</option>
               ))}
             </select>
           </div>
@@ -101,8 +102,8 @@ export default function ProblemTriageQueue() {
               onChange={(e) => setSelectedDept(e.target.value)}
               className="w-full bg-slate-800 border border-slate-700 text-white rounded-xl p-2.5 font-bold focus:ring-2 focus:ring-emerald-400 focus:outline-none"
             >
-              {govDepartments.map(d => (
-                <option key={d.id} value={d.id}>{d.name}</option>
+              {(govDepartments || []).map(d => (
+                <option key={d?.id || Math.random()} value={d?.id}>{d?.name || 'Department'}</option>
               ))}
             </select>
           </div>
@@ -208,8 +209,9 @@ export default function ProblemTriageQueue() {
 
               {/* Action Toolbar */}
               <div className="pt-3 border-t border-slate-100 flex flex-wrap items-center justify-between gap-3 text-xs">
-                <div className="text-slate-600 text-[11px] italic">
-                  <strong>AI Inferred Cause:</strong> {cluster.aiIntelligence?.aiInferredCauses || cluster.aiIntelligence?.rootProblem}
+                <div className="text-slate-600 text-[11px] max-w-xl">
+                  <span className="font-bold text-slate-800">AI Inferred Cause: </span>
+                  <MarkdownRenderer content={cluster.aiIntelligence?.aiInferredCauses || cluster.aiIntelligence?.rootProblem} className="inline text-slate-600" />
                 </div>
 
                 <div className="flex items-center space-x-2">

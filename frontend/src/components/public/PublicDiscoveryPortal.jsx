@@ -22,9 +22,10 @@ export default function PublicDiscoveryPortal() {
   const [search, setSearch] = useState('');
   const [selectedDomain, setSelectedDomain] = useState('All');
 
-  const publicClusters = problemClusters.filter(c => {
-    const matchD = selectedDomain === 'All' || c.primaryDomain === selectedDomain;
-    const matchS = !search || c.title.toLowerCase().includes(search.toLowerCase()) || c.districtName.toLowerCase().includes(search.toLowerCase());
+  const publicClusters = (problemClusters || []).filter(c => {
+    if (!c) return false;
+    const matchD = selectedDomain === 'All' || c.primaryDomain === selectedDomain || c.domain === selectedDomain;
+    const matchS = !search || c.title?.toLowerCase().includes(search.toLowerCase()) || c.districtName?.toLowerCase().includes(search.toLowerCase());
     return matchD && matchS;
   });
 

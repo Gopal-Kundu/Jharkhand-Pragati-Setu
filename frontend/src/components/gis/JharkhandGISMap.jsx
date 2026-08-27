@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useAppState } from '../../context/StateContext';
+import ReactGISMap from './ReactGISMap';
 import { 
   MapPin, 
   Layers, 
@@ -12,7 +13,9 @@ import {
   Sprout,
   HeartPulse,
   Sun,
-  GraduationCap
+  GraduationCap,
+  Globe,
+  Compass
 } from 'lucide-react';
 
 export default function JharkhandGISMap() {
@@ -26,11 +29,19 @@ export default function JharkhandGISMap() {
     lang 
   } = useAppState();
 
+  const [mapMode, setMapMode] = useState('leaflet'); // 'leaflet' | 'schematic'
   const [activeLayer, setActiveLayer] = useState('All'); // All, Water, Agri, Health, Energy
-  const [hoveredDistrict, setHoveredDistrict] = useState(null);
-
-  const activeDistrict = districts.find(d => d.id === activeDistrictId) || districts[0];
-  const districtProblems = problemClusters.filter(c => c.district === activeDistrictId);
+  const activeDistrict = (districts || []).find(d => d?.id === activeDistrictId) || (districts && districts[0]) || {
+    id: 'khunti',
+    name: 'Khunti',
+    nameHi: 'खूंटी',
+    tier: 'Aspirational District',
+    totalProblems: 1,
+    activeProjects: 1,
+    impactCount: 12400,
+    blocks: ['Torpa', 'Murhu', 'Karra', 'Rania', 'Khunti']
+  };
+  const districtProblems = (problemClusters || []).filter(c => c?.district === activeDistrictId || c?.districtName?.toLowerCase() === activeDistrictId);
 
   // Approximate relative 2D positions of Jharkhand 24 districts for SVG grid representation
   const districtPositions = {
@@ -108,17 +119,52 @@ export default function JharkhandGISMap() {
         </div>
       </div>
 
-      {/* Main Grid: Interactive Map + District Sidebar Drilldown */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* SVG Interactive 24-District Map */}
-        <div className="lg:col-span-2 bg-gradient-to-b from-slate-900 via-slate-900 to-slate-950 rounded-3xl p-5 border border-slate-800 shadow-2xl relative overflow-hidden flex flex-col justify-between">
-          <div className="flex items-center justify-between text-xs text-slate-400 mb-2">
-            <span className="flex items-center space-x-1.5 text-emerald-400 font-bold">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
-              <span>Click any district polygon to inspect local challenges & pilots</span>
-            </span>
-            <span className="text-[11px] font-mono text-slate-500">Scale: 1:250,000</span>
-          </div>
+      {/* View Mode Toggle: Interactive React GIS Map vs Schematic Matrix */}
+      <div className="flex items-center justify-between gap-3 bg-slate-900/80 p-2 rounded-2xl border border-slate-800">
+        <div className="flex items-center space-x-2">
+          <button
+            onClick={() => setMapMode('leaflet')}
+            className={`flex items-center space-x-1.5 px-4 py-2 rounded-xl text-xs font-black transition-all cursor-pointer ${
+              mapMode === 'leaflet'
+                ? 'bg-gradient-to-r from-emerald-500 to-teal-600 text-slate-950 shadow-md'
+                : 'text-slate-400 hover:text-white'
+            }`}
+          >
+            <Globe className="w-4 h-4" />
+            <span>🛰️ Interactive React GIS Map (GPS Pins & Telemetry)</span>
+          </button>
+          <button
+            onClick={() => setMapMode('schematic')}
+            className={`flex items-center space-x-1.5 px-4 py-2 rounded-xl text-xs font-black transition-all cursor-pointer ${
+              mapMode === 'schematic'
+                ? 'bg-gradient-to-r from-emerald-500 to-teal-600 text-slate-950 shadow-md'
+                : 'text-slate-400 hover:text-white'
+            }`}
+          >
+            <Compass className="w-4 h-4" />
+            <span>🗺️ 24-District Region Matrix</span>
+          </button>
+        </div>
+
+        <span className="text-[11px] font-mono text-emerald-400 hidden sm:inline">
+          Centroid: 23.6102° N, 85.2799° E (Jharkhand)
+        </span>
+      </div>
+
+      {mapMode === 'leaflet' ? (
+        <ReactGISMap />
+      ) : (
+        /* Main Grid: Interactive Map + District Sidebar Drilldown */
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* SVG Interactive 24-District Map */}
+          <div className="lg:col-span-2 bg-gradient-to-b from-slate-900 via-slate-900 to-slate-950 rounded-3xl p-5 border border-slate-800 shadow-2xl relative overflow-hidden flex flex-col justify-between">
+            <div className="flex items-center justify-between text-xs text-slate-400 mb-2">
+              <span className="flex items-center space-x-1.5 text-emerald-400 font-bold">
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+                <span>Click any district polygon to inspect local challenges & pilots</span>
+              </span>
+              <span className="text-[11px] font-mono text-slate-500">Scale: 1:250,000</span>
+            </div>
 
           {/* SVG Map Canvas */}
           <div className="relative w-full aspect-[4/3] max-h-[500px] flex items-center justify-center">
@@ -330,6 +376,7 @@ export default function JharkhandGISMap() {
           </div>
         </div>
       </div>
+      )}
     </div>
   );
 }
