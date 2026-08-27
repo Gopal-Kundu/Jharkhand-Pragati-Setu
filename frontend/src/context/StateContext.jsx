@@ -31,7 +31,17 @@ export function StateProvider({ children }) {
   };
 
   // 1. Language: 'en' | 'hi'
-  const [lang, setLang] = useState('en');
+  const [lang, setLangState] = useState(() => {
+    if (typeof document !== 'undefined' && document.cookie.includes('googtrans=/en/hi')) return 'hi';
+    return (typeof localStorage !== 'undefined' && localStorage.getItem('app_lang')) || 'en';
+  });
+
+  const setLang = (newLang) => {
+    setLangState(newLang);
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem('app_lang', newLang);
+    }
+  };
 
   // 2. Active Role: 'citizen' | 'panchayat' | 'government' | 'university' | 'industry' | 'public'
   const [activeRole, setActiveRoleState] = useState(reduxAuth.activeRole || 'citizen');

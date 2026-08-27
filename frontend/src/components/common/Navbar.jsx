@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAppState } from '../../context/StateContext';
 import { useSelector, useDispatch } from 'react-redux';
 import { logoutUser } from '../../store/slices/authSlice';
+import { changeGoogleLanguage } from '../../utils/googleTranslate';
 import { LogIn, LogOut, UserCheck, Menu, X, Globe, User } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -12,6 +13,11 @@ export default function Navbar() {
   const authState = useSelector((state) => state.auth);
   const { lang = 'en', setLang = () => {} } = useAppState() || {};
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  const handleLanguageChange = (newLang) => {
+    setLang(newLang);
+    changeGoogleLanguage(newLang);
+  };
 
   const handleLogout = async () => {
     await dispatch(logoutUser());
@@ -69,7 +75,7 @@ export default function Navbar() {
           {/* Hindi / English Language Toggle */}
           <div className="flex items-center bg-slate-100 rounded-xl p-1 text-xs font-semibold border border-slate-200 shadow-inner">
             <button
-              onClick={() => setLang('en')}
+              onClick={() => handleLanguageChange('en')}
               className={`px-3 py-1 rounded-lg cursor-pointer transition-all ${
                 lang === 'en' 
                   ? 'bg-emerald-600 text-white font-bold shadow-sm' 
@@ -79,7 +85,7 @@ export default function Navbar() {
               English
             </button>
             <button
-              onClick={() => setLang('hi')}
+              onClick={() => handleLanguageChange('hi')}
               className={`px-3 py-1 rounded-lg cursor-pointer transition-all ${
                 lang === 'hi' 
                   ? 'bg-emerald-600 text-white font-bold shadow-sm' 
@@ -129,7 +135,7 @@ export default function Navbar() {
         <div className="flex sm:hidden items-center space-x-2">
           {/* Compact Lang Switch */}
           <button
-            onClick={() => setLang(lang === 'en' ? 'hi' : 'en')}
+            onClick={() => handleLanguageChange(lang === 'en' ? 'hi' : 'en')}
             className="flex items-center space-x-1 px-2.5 py-1.5 rounded-xl bg-slate-100 border border-slate-200 text-slate-800 text-xs font-bold shadow-inner"
             title="Switch Language"
           >
