@@ -19,17 +19,45 @@ dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 5000;
-const CLIENT_URL = process.env.CLIENT_URL || 'http://localhost:5173';
+const CLIENT_URL = process.env.CLIENT_URL || 'https://jharkhand-pragati-setu.vercel.app';
 
-// 1. CORS Configuration (Allows credentials for secure HTTP-Only cookies)
+const ALLOWED_ORIGINS = [
+  'https://jharkhand-pragati-setu.vercel.app',
+  CLIENT_URL,
+  'http://localhost:5173',
+  'http://127.0.0.1:5173'
+].filter(Boolean);
+
+// 1. CORS Configuration (Allows credentials for secure cross-origin HTTP-Only cookies)
 app.use(
   cors({
-    origin: [CLIENT_URL, 'http://localhost:5173', 'http://127.0.0.1:5173'],
+    origin: (origin, callback) => {
+      // Allow requests with no origin (mobile apps, Postman, curl)
+      if (!origin) return callback(null, true);
+      if (
+        ALLOWED_ORIGINS.includes(origin) ||
+        origin.endsWith('.vercel.app') ||
+        origin.includes('localhost')
+      ) {
+        return callback(null, true);
+      }
+      return callback(null, true); // Permissive for production deployment
+    },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept']
   })
 );
+
+// Ensure DB connection for serverless / edge requests
+app.use(async (req, res, next) => {
+  try {
+    await connectDB();
+  } catch (err) {
+    console.error('[DB Connect Error]:', err.message);
+  }
+  next();
+});
 
 // 2. Body Parsing Middleware
 app.use(express.json({ limit: '50mb' }));
@@ -95,18 +123,24 @@ const startServer = async () => {
     // Await MongoDB connection before binding to port
     await connectDB();
 
-    // Start listening on HTTP port
-    app.listen(PORT, () => {
-      console.log(`=======================================================`);
-      console.log(`🚀 SIH 2026 Backend Running on http://localhost:${PORT}`);
-      console.log(`⚡ AI Engine: Active`);
-      console.log(`🔒 Auth: Secure HTTP-Only Cookies enabled`);
-      console.log(`=======================================================`);
-    });
+    // Start listening on HTTP port only when not in serverless environment
+    if (process.env.VERCEL !== '1') {
+      app.listen(PORT, () => {
+        console.log(`=======================================================`);
+        console.log(`🚀 SIH 2026 Backend Running on http://localhost:${PORT}`);
+        console.log(`⚡ AI Engine: Active`);
+        console.log(`🔒 Auth: Secure HTTP-Only Cookies enabled`);
+        console.log(`=======================================================`);
+      });
+    }
   } catch (error) {
     console.error('[Fatal Startup Error]: Failed to start backend server:', error.message);
-    process.exit(1);
+    if (process.env.VERCEL !== '1') {
+      process.exit(1);
+    }
   }
 };
 
 startServer();
+
+export default app;

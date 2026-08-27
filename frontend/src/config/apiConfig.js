@@ -1,8 +1,13 @@
 /**
  * Centralized API & Backend Configuration
- * Single source of truth for Backend URL and API Endpoints (No client-side .env required)
+ * Production Backend URL: https://backend-psi-jade-47.vercel.app
  */
-export const BACKEND_URL = 'http://localhost:5000';
+export const BACKEND_URL = import.meta.env.VITE_API_BASE_URL 
+  ? import.meta.env.VITE_API_BASE_URL.replace(/\/api\/?$/, '') 
+  : (import.meta.env.PROD || window.location.hostname !== 'localhost'
+      ? 'https://backend-psi-jade-47.vercel.app' 
+      : 'http://localhost:5000');
+
 export const API_BASE_URL = `${BACKEND_URL}/api`;
 
 export const API_ENDPOINTS = {
