@@ -6,7 +6,6 @@
 [![Node.js](https://img.shields.io/badge/Node.js_Express-339933?style=for-the-badge&logo=nodedotjs&logoColor=white)](https://nodejs.org/)
 [![MongoDB](https://img.shields.io/badge/MongoDB_Atlas-47A248?style=for-the-badge&logo=mongodb&logoColor=white)](https://www.mongodb.com/)
 [![TailwindCSS](https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white)](https://tailwindcss.com/)
-[![License](https://img.shields.io/badge/License-MIT-blue.svg?style=for-the-badge)](LICENSE)
 
 ---
 
@@ -16,22 +15,6 @@
 
 Citizens and Gram Panchayats report localized grievances and infrastructural bottlenecks with rich multimedia evidence. Our proprietary **AI Intelligence Engine** automatically triages, scores severity, deduplicates, and matches challenges to university research laboratories. Universities formulate multidisciplinary student-faculty teams, submit solution proposals, secure corporate CSR matching grants, and receive statutory Government Sanction Orders.
 
----
-
-## 🏛️ Platform Architecture & 5-Stakeholder Workflow
-
-```mermaid
-flowchart LR
-    A[👨‍🌾 Citizens / Gram Panchayats] -->|Submit Issue + Media + GPS| B[⚡ AI Triage & Classification Engine]
-    B -->|Categorize & Score Severity| C[🏛️ Government Innovation Council]
-    C -->|Allocate Challenge to Labs| D[🎓 Universities & Multidisciplinary Teams]
-    D -->|Submit Solution Proposals| E[🏢 Industry CSR / Corporate Sponsors]
-    E -->|Pledge CSR Grants & Equipment| C
-    C -->|Issue Official Sanction Order| F[🚀 Pilot Prototyping & Field Testing]
-    F -->|Telemetry & Verifiable Impact| A
-```
-
----
 
 ## ✨ Key Features & Stakeholder Portals
 
@@ -243,14 +226,3 @@ Frontend will be running on `http://localhost:5173`.
 | `GET` | `/api/analytics` | Public | State-wide innovation metrics and GIS hotspots |
 
 ---
-
-## 👥 Contributors
-
-- **Gopal Kundu** — Lead Full-Stack Architect & AI Systems Engineer ([GitHub](https://github.com/Gopal-Kundu))
-- Built for the **Smart India Hackathon (SIH 2026)**
-
----
-
-## 📄 License
-
-This project is licensed under the **MIT License** — see the [LICENSE](LICENSE) file for details.
