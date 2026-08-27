@@ -114,7 +114,18 @@ export const authSlice = createSlice({
 
     // Logout
     builder
+      .addCase(logoutUser.pending, (state) => {
+        state.user = null;
+        state.isAuthenticated = false;
+        state.activeRole = 'citizen';
+      })
       .addCase(logoutUser.fulfilled, (state) => {
+        state.user = null;
+        state.isAuthenticated = false;
+        state.activeRole = 'citizen';
+        state.loading = false;
+      })
+      .addCase(logoutUser.rejected, (state) => {
         state.user = null;
         state.isAuthenticated = false;
         state.activeRole = 'citizen';

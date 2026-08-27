@@ -170,14 +170,24 @@ export const login = async (req, res) => {
  */
 export const logout = async (req, res) => {
   try {
-    res.cookie('token', '', {
+    const isProd = process.env.NODE_ENV === 'production' || process.env.VERCEL === '1' || Boolean(process.env.CLIENT_URL && process.env.CLIENT_URL.startsWith('https'));
+
+    const clearOptions = {
       httpOnly: true,
-      expires: new Date(0), // Expire cookie immediately
-      secure: isHttps,
-      sameSite: isHttps ? 'none' : 'lax',
+      secure: isProd,
+      sameSite: isProd ? 'none' : 'lax',
       path: '/',
-      partitioned: true
-    });
+      expires: new Date(0),
+      maxAge: 0
+    };
+
+    // 1. Clear partitioned cookie (Chrome / Edge CHIPS)
+    res.clearCookie('token', { ...clearOptions, partitioned: true });
+    res.cookie('token', '', { ...clearOptions, partitioned: true });
+
+    // 2. Clear standard unpartitioned cookie (Safari / Firefox / Local)
+    res.clearCookie('token', clearOptions);
+    res.cookie('token', '', clearOptions);
 
     return res.status(200).json({
       success: true,
