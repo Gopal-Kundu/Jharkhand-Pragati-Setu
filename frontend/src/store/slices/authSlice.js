@@ -5,9 +5,10 @@ import authApi from '../../services/authApi';
 export const fetchCurrentUser = createAsyncThunk('auth/fetchCurrentUser', async (_, { rejectWithValue }) => {
   try {
     const data = await authApi.getMe();
-    return data.user;
+    return data?.user || null;
   } catch (error) {
-    return rejectWithValue(error.message);
+    // Gracefully handle unauthenticated visitor without noisy error state
+    return rejectWithValue(null);
   }
 });
 

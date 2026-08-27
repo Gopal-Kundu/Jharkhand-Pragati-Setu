@@ -5,6 +5,8 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
+const isHttps = process.env.NODE_ENV === 'production' || process.env.VERCEL === '1' || Boolean(process.env.CLIENT_URL && process.env.CLIENT_URL.startsWith('https'));
+
 /**
  * Generate JWT Token and set it inside an HTTP-Only secure cookie
  * 
@@ -19,8 +21,9 @@ const sendTokenCookie = (res, userId) => {
   const cookieOptions = {
     expires: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
     httpOnly: true, // Prevents XSS attacks by disallowing client-side JS access
-    secure: process.env.NODE_ENV === 'production', // HTTPS only in production
-    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax'
+    secure: isHttps, // Required for SameSite=None on HTTPS
+    sameSite: isHttps ? 'none' : 'lax', // Required for cross-domain cookie transmission
+    path: '/'
   };
 
   res.cookie('token', token, cookieOptions);
@@ -69,11 +72,12 @@ export const register = async (req, res) => {
       phone: phone || ''
     });
 
-    // Set secure HTTP-Only cookie
-    sendTokenCookie(res, user._id);
+    // Set secure HTTP-Only cookie & get token
+    const token = sendTokenCookie(res, user._id);
 
     return res.status(201).json({
       success: true,
+      token,
       message: `User registered successfully with role '${user.role}'`,
       user: {
         _id: user._id,
@@ -130,11 +134,12 @@ export const login = async (req, res) => {
       });
     }
 
-    // Set secure HTTP-Only cookie
-    sendTokenCookie(res, user._id);
+    // Set secure HTTP-Only cookie & get token
+    const token = sendTokenCookie(res, user._id);
 
     return res.status(200).json({
       success: true,
+      token,
       message: `Welcome back, ${user.name}!`,
       user: {
         _id: user._id,
@@ -167,8 +172,9 @@ export const logout = async (req, res) => {
     res.cookie('token', '', {
       httpOnly: true,
       expires: new Date(0), // Expire cookie immediately
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax'
+      secure: isHttps,
+      sameSite: isHttps ? 'none' : 'lax',
+      path: '/'
     });
 
     return res.status(200).json({

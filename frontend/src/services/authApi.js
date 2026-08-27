@@ -2,7 +2,7 @@ import apiClient from './api';
 
 /**
  * Authentication API Service
- * Interacts with /api/auth endpoints (Session managed via HTTP-Only cookies)
+ * Interacts with /api/auth endpoints (Session managed purely via secure HTTP-Only cookies)
  */
 export const authApi = {
   // Register a new user
@@ -23,7 +23,7 @@ export const authApi = {
     return res.data;
   },
 
-  // Get current authenticated user session
+  // Get current authenticated user session from HTTP-Only cookie
   getMe: async () => {
     const res = await apiClient.get('/auth/me');
     return res.data;

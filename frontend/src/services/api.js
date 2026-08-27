@@ -3,11 +3,11 @@ import { API_BASE_URL } from '../config/apiConfig';
 
 /**
  * Base Axios Client
- * Configured with withCredentials = true to automatically transmit HTTP-Only Auth Cookies
+ * Configured with withCredentials = true to automatically transmit secure HTTP-Only Auth Cookies
  */
 export const apiClient = axios.create({
   baseURL: API_BASE_URL,
-  withCredentials: true, // Required for HTTP-Only Cookie authentication
+  withCredentials: true, // Required for HTTP-Only Cookie authentication across domains
   headers: {
     'Content-Type': 'application/json',
     'Accept': 'application/json'

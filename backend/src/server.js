@@ -21,6 +21,9 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 const CLIENT_URL = process.env.CLIENT_URL || 'https://jharkhand-pragati-setu.vercel.app';
 
+// Trust reverse proxy for secure HTTPS cookies on Vercel
+app.set('trust proxy', 1);
+
 const ALLOWED_ORIGINS = [
   'https://jharkhand-pragati-setu.vercel.app',
   CLIENT_URL,

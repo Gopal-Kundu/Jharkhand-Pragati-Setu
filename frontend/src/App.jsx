@@ -21,9 +21,8 @@ function AppRouter() {
   const dispatch = useDispatch();
 
   useEffect(() => {
-    // Call ONLY 2 targeted APIs on initial landing page load:
     // 1. fetchSolvedChallenges(6) -> GET /api/problems?resolutionStatus=solved&limit=6
-    // 2. fetchCurrentUser() -> GET /api/auth/me
+    // 2. fetchCurrentUser() -> Check HTTP-Only cookie session on /api/auth/me
     dispatch(fetchSolvedChallenges(6));
     dispatch(fetchCurrentUser());
   }, [dispatch]);
