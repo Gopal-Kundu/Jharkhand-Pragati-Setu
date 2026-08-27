@@ -83,7 +83,7 @@ export default function MainLayout() {
               Toll Free Challenge Helpline: <strong className="text-emerald-700">1800-345-SIH26</strong><br />
               Email: <code className="bg-slate-100 text-emerald-800 px-1 py-0.5 rounded">innovation@jharkhand.gov.in</code><br />
               Secretariat: Project Building, Dhurwa, Ranchi - 834004<br />
-              AI Status: <span className="text-emerald-700 font-mono font-bold">AI Engine Active</span>
+              
             </p>
           </div>
         </div>

@@ -57,6 +57,16 @@ const DOMAIN_COLORS = {
   'Rural Livelihoods': 'bg-lime-50 text-lime-800 border-lime-200'
 };
 
+// Helper to safely extract string values from strings or objects
+const getSafeString = (val, fallback = '') => {
+  if (!val) return fallback;
+  if (typeof val === 'string') return val;
+  if (typeof val === 'object') {
+    return val.name || val.title || val.label || fallback;
+  }
+  return String(val);
+};
+
 export default function ProblemDetailsModal({ problemId, onClose }) {
   const [problem, setProblem] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -100,6 +110,15 @@ export default function ProblemDetailsModal({ problemId, onClose }) {
   const proposal = problem?.proposals?.[0];
   const industryPartner = problem?.industryPartners?.[0];
 
+  const facultyLeadName = getSafeString(problem?.allocatedUniversity?.facultyLead, 'Lead Investigator');
+  const facultyLeadDept = problem?.allocatedUniversity?.facultyLead?.department 
+    ? ` (${problem.allocatedUniversity.facultyLead.department})` 
+    : '';
+
+  const submitterName = getSafeString(problem?.submitter?.name, 'Concerned Citizen');
+  const mentorName = getSafeString(industryPartner?.mentorName, 'Corporate Technical Lead');
+  const studentLeadName = getSafeString(proposal?.team?.studentLead, 'Student Lead');
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-slate-900/70 backdrop-blur-sm animate-in fade-in overflow-y-auto">
       <div 
@@ -120,7 +139,7 @@ export default function ProblemDetailsModal({ problemId, onClose }) {
             {isSolved && (
               <span className="flex items-center space-x-1 font-mono text-xs font-black px-3 py-1 rounded-xl bg-emerald-100 text-emerald-800 border border-emerald-300">
                 <CheckCircle2 className="w-3.5 h-3.5 text-emerald-700" />
-                <span>FIELD DEPLOYED &amp; SOLVED</span>
+                <span>SOLVED</span>
               </span>
             )}
           </div>
@@ -140,7 +159,7 @@ export default function ProblemDetailsModal({ problemId, onClose }) {
             <div className="py-24 flex flex-col items-center justify-center space-y-4">
               <Loader2 className="w-10 h-10 text-emerald-600 animate-spin" />
               <div className="text-sm font-bold text-slate-700 font-mono">
-                Fetching Live Problem Record from API...
+                Loading...
               </div>
             </div>
           ) : error ? (
@@ -171,10 +190,10 @@ export default function ProblemDetailsModal({ problemId, onClose }) {
                     </span>
                   </span>
 
-                  {problem.submitter?.name && (
+                  {problem.submitter && (
                     <span className="flex items-center space-x-1 text-slate-500">
                       <User className="w-3.5 h-3.5 text-slate-400" />
-                      <span>Reported by <strong>{problem.submitter.name}</strong> ({problem.submitter.role || 'Citizen'})</span>
+                      <span>Reported by <strong>{submitterName}</strong> ({problem.submitter.role || 'Citizen'})</span>
                     </span>
                   )}
 
@@ -195,7 +214,7 @@ export default function ProblemDetailsModal({ problemId, onClose }) {
                     className="w-full h-72 sm:h-96 object-cover object-center"
                   />
                   <div className="absolute bottom-3 left-3 bg-black/60 backdrop-blur-md px-3.5 py-1.5 rounded-xl text-white text-xs font-semibold border border-white/20">
-                    📷 Field Evidence Snapshot: {problem.evidence[0].caption || 'Ground Site Photo'}
+                    {problem.evidence[0].caption || 'Ground Site Photo'}
                   </div>
                 </div>
               )}
@@ -204,7 +223,7 @@ export default function ProblemDetailsModal({ problemId, onClose }) {
               <div className="p-6 rounded-3xl bg-slate-50 border border-slate-200/80 space-y-3">
                 <div className="flex items-center space-x-2 text-xs font-bold font-mono text-slate-500 uppercase tracking-wider">
                   <FileText className="w-4 h-4 text-emerald-600" />
-                  <span>Problem Statement &amp; Root Cause Analysis</span>
+                  <span>Problem Statement</span>
                 </div>
                 <p className="text-sm sm:text-base text-slate-800 leading-relaxed font-normal whitespace-pre-line">
                   {problem.description}
@@ -245,10 +264,10 @@ export default function ProblemDetailsModal({ problemId, onClose }) {
                   
                   <div>
                     <h4 className="font-extrabold text-base text-slate-900 font-heading">
-                      {problem.allocatedUniversity?.name || 'Higher Education Lab'}
+                      {getSafeString(problem.allocatedUniversity?.name, 'Higher Education Lab')}
                     </h4>
                     <p className="text-xs text-slate-600 mt-1">
-                      Faculty Lead: <strong>{problem.allocatedUniversity?.facultyLead || 'Lead Investigator'}</strong>
+                      Faculty Lead: <strong>{facultyLeadName}{facultyLeadDept}</strong>
                     </p>
                   </div>
 
@@ -258,7 +277,7 @@ export default function ProblemDetailsModal({ problemId, onClose }) {
                       <p className="text-slate-600 text-[11px] leading-relaxed line-clamp-3">{proposal.abstract}</p>
                       {proposal.team && (
                         <div className="text-[11px] text-purple-900 pt-1 font-mono">
-                          Team: {proposal.team.studentLead} ({proposal.team.department})
+                          Team: {studentLeadName} {proposal.team.department ? `(${proposal.team.department})` : ''}
                         </div>
                       )}
                     </div>
@@ -274,10 +293,10 @@ export default function ProblemDetailsModal({ problemId, onClose }) {
 
                   <div>
                     <h4 className="font-extrabold text-base text-slate-900 font-heading">
-                      {industryPartner?.companyName || 'State CSR Foundation'}
+                      {getSafeString(industryPartner?.companyName, 'State CSR Foundation')}
                     </h4>
                     <p className="text-xs text-slate-600 mt-1">
-                      CSR Mentor: <strong>{industryPartner?.mentorName || 'Corporate Lead'}</strong>
+                      Mentor: <strong>{mentorName}</strong>
                     </p>
                   </div>
 
@@ -288,9 +307,7 @@ export default function ProblemDetailsModal({ problemId, onClose }) {
                         {industryPartner?.grantAmount ? `₹${(industryPartner.grantAmount / 100000).toFixed(1)} Lakhs` : 'Grant Committed'}
                       </div>
                     </div>
-                    <span className="font-mono text-[10px] font-bold bg-amber-200 text-amber-950 px-2.5 py-1 rounded-lg">
-                      100% Disbursed
-                    </span>
+                    
                   </div>
                 </div>
 
@@ -301,7 +318,7 @@ export default function ProblemDetailsModal({ problemId, onClose }) {
                 <div className="p-6 rounded-3xl bg-white border border-slate-200 space-y-4">
                   <div className="flex items-center space-x-2 text-xs font-bold font-mono text-slate-600 uppercase tracking-wider">
                     <Layers className="w-4 h-4 text-emerald-600" />
-                    <span>Execution Milestones &amp; Deployment Roadmap</span>
+                    <span>Project Progress</span>
                   </div>
 
                   <div className="space-y-3">
@@ -333,28 +350,7 @@ export default function ProblemDetailsModal({ problemId, onClose }) {
                 </div>
               )}
 
-              {/* AI Triage & Verification Intelligence */}
-              {problem.aiAnalysis && (
-                <div className="p-6 rounded-3xl bg-slate-900 text-white space-y-3">
-                  <div className="flex items-center space-x-2 text-xs font-bold font-mono text-emerald-400 uppercase tracking-wider">
-                    <Cpu className="w-4 h-4" />
-                    <span>AI Engine Triage &amp; Department Routing</span>
-                  </div>
-                  
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
-                    <div>
-                      <span className="text-slate-400">Department Routed:</span>
-                      <div className="font-bold text-white mt-0.5">{problem.aiAnalysis.suggestedDepartment || 'State Innovation Council'}</div>
-                    </div>
-                    <div>
-                      <span className="text-slate-400">AI Confidence Score:</span>
-                      <div className="font-bold text-emerald-400 mt-0.5">
-                        {problem.aiAnalysis.confidenceScore ? `${(problem.aiAnalysis.confidenceScore * 100).toFixed(1)}% Match` : '94.5%'}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
+              
 
             </>
           )}
@@ -362,7 +358,7 @@ export default function ProblemDetailsModal({ problemId, onClose }) {
 
         {/* Modal Footer */}
         <div className="p-5 sm:p-6 border-t border-slate-100 bg-slate-50/80 flex items-center justify-between text-xs text-slate-500">
-          <span>State Innovation Council • SIH 2026</span>
+          <span> </span>
           <button
             onClick={onClose}
             className="px-6 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs transition-colors cursor-pointer"

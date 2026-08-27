@@ -96,7 +96,7 @@ export default function LandingPage() {
           {/* Action CTA Buttons */}
           <div className="flex flex-wrap items-center justify-center gap-4 pt-2">
             <button
-              onClick={() => setIsSubmitModalOpen(true)}
+              onClick={() => navigate('/auth')}
               className="flex items-center space-x-2.5 px-8 py-4 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-sm sm:text-base shadow-xl shadow-emerald-600/25 transition-all hover:scale-105 cursor-pointer"
             >
               <span>Submit a Societal Challenge</span>
@@ -201,26 +201,17 @@ export default function LandingPage() {
                   )}
 
                   {/* Institution & Action Row */}
-                  <div className="pt-3 border-t border-slate-100 space-y-2">
-                    <div className="flex items-center justify-between text-xs text-slate-500">
-                      <span className="flex items-center space-x-1 truncate max-w-[170px]">
-                        <GraduationCap className="w-3.5 h-3.5 text-emerald-700 flex-shrink-0" />
-                        <span className="font-semibold text-slate-800 truncate">
-                          {p.allocatedUniversity?.name || 'HEI Lab'}
-                        </span>
+                  <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
+                    <span className="flex items-center space-x-1 truncate max-w-[180px] text-slate-500">
+                      <GraduationCap className="w-3.5 h-3.5 text-emerald-700 flex-shrink-0" />
+                      <span className="font-semibold text-slate-800 truncate">
+                        {p.allocatedUniversity?.name || 'HEI Lab'}
                       </span>
-                      <span className="font-bold text-emerald-800">
-                        {p.industryPartners?.[0]?.grantAmount ? `₹${(p.industryPartners[0].grantAmount / 100000).toFixed(1)}L Grant` : 'CSR Funded'}
-                      </span>
-                    </div>
-
-                    <div className="flex items-center justify-between text-xs pt-1">
-                      <span className="text-slate-400 font-medium text-[11px]">Lifecycle Complete</span>
-                      <span className="text-emerald-700 font-bold flex items-center space-x-1 group-hover:translate-x-1 transition-transform">
-                        <span>View Solution</span>
-                        <ChevronRight className="w-3.5 h-3.5" />
-                      </span>
-                    </div>
+                    </span>
+                    <span className="text-emerald-700 font-bold flex items-center space-x-1 group-hover:translate-x-1 transition-transform whitespace-nowrap">
+                      <span>View Solution</span>
+                      <ChevronRight className="w-3.5 h-3.5" />
+                    </span>
                   </div>
 
                 </div>
