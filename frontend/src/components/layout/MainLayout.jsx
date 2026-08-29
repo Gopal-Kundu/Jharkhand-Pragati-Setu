@@ -55,13 +55,13 @@ export default function MainLayout() {
 
       {/* Modals & Slide-outs */}
       <MultiStepSubmissionModal />
-      <AIAssistantModal />
+      {/* <AIAssistantModal />
       <AuditLogDrawer />
       <SIHPitchTour
         isOpen={isPitchTourOpen}
         onClose={() => setIsPitchTourOpen(false)}
         onJumpToView={handleJumpFromTour}
-      />
+      /> */}
 
       {/* Modern Light Clean Footer */}
       <footer className="bg-white text-slate-600 border-t border-slate-200 text-xs py-10 px-4 sm:px-6 lg:px-8 mt-auto shadow-sm">

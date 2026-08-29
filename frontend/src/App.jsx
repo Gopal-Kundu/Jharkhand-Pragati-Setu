@@ -74,6 +74,7 @@ function AppRouter() {
           {/* Catch-all Fallback */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
+        
       </Routes>
     </BrowserRouter>
   );

@@ -157,18 +157,19 @@ export default function ProblemDetailsModal({ problemId, onClose }) {
         {/* Header */}
         <div className="flex items-center justify-between p-5 sm:p-6 border-b border-slate-100 bg-slate-50/80">
           <div className="flex items-center space-x-3">
-            <span className="font-mono text-xs font-black px-3 py-1 rounded-xl bg-slate-200/80 text-slate-800 border border-slate-300">
-              #{problem?.ticketId || problemId}
-            </span>
-            <div className={`flex items-center space-x-1.5 px-3 py-1 rounded-xl text-xs font-bold border ${colorScheme}`}>
-              <Icon className="w-3.5 h-3.5" />
-              <span>{domain}</span>
-            </div>
-            {isSolved && (
-              <span className="flex items-center space-x-1 font-mono text-xs font-black px-3 py-1 rounded-xl bg-emerald-100 text-emerald-800 border border-emerald-300">
-                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-700" />
-                <span>SOLVED</span>
-              </span>
+            {!loading && (
+              <>
+                <div className={`flex items-center space-x-1.5 px-3 py-1 rounded-xl text-xs font-bold border ${colorScheme}`}>
+                  <Icon className="w-3.5 h-3.5" />
+                  <span>{domain}</span>
+                </div>
+                {isSolved && (
+                  <span className="flex items-center space-x-1 font-mono text-xs font-black px-3 py-1 rounded-xl bg-emerald-100 text-emerald-800 border border-emerald-300">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-700" />
+                    <span>SOLVED</span>
+                  </span>
+                )}
+              </>
             )}
           </div>
 
@@ -221,7 +222,7 @@ export default function ProblemDetailsModal({ problemId, onClose }) {
                   {problem.submitter && (
                     <span className="flex items-center space-x-1 text-slate-500">
                       <User className="w-3.5 h-3.5 text-slate-400" />
-                      <span>Reported by <strong>{submitterName}</strong> ({problem.submitter.role || 'Citizen'})</span>
+                      <span>Reported by <strong>{submitterName}</strong></span>
                     </span>
                   )}
 

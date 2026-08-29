@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAppState } from '../context/StateContext';
 import JharkhandStateOverview from '../components/common/JharkhandStateOverview';
 import ProblemDetailsModal from '../components/common/ProblemDetailsModal';
+import AnimatedCounter from '../components/common/AnimatedCounter';
 import {
   Sparkles,
   ArrowRight,
@@ -24,38 +25,11 @@ import {
   Footprints
 } from 'lucide-react';
 
-const DOMAIN_ICONS = {
-  'Water Resources': Droplets,
-  'Agriculture': Sprout,
-  'Healthcare': HeartPulse,
-  'Education': BookOpen,
-  'Environment': Flame,
-  'Energy': Sun,
-  'Urban Development': Building,
-  'Accessibility': Eye,
-  'Public Administration': FileCheck,
-  'Rural Livelihoods': Footprints
-};
-
-const DOMAIN_IMAGES = {
-  'Water Resources': 'https://images.unsplash.com/photo-1541888946425-d0fbb18086f6?auto=format&fit=crop&w=800&q=80',
-  'Agriculture': 'https://images.unsplash.com/photo-1592982537447-7440770cbfc9?auto=format&fit=crop&w=800&q=80',
-  'Healthcare': 'https://images.unsplash.com/photo-1527613426441-4da17471b66d?auto=format&fit=crop&w=800&q=80',
-  'Environment': 'https://images.unsplash.com/photo-1508873696983-2df5293cb32f?auto=format&fit=crop&w=800&q=80',
-  'Energy': 'https://images.unsplash.com/photo-1509391365360-2e959784a276?auto=format&fit=crop&w=800&q=80',
-  'Urban Development': 'https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?auto=format&fit=crop&w=800&q=80',
-  'Education': 'https://images.unsplash.com/photo-1509062522246-3755977927d7?auto=format&fit=crop&w=800&q=80',
-  'Accessibility': 'https://images.unsplash.com/photo-1584515979956-d9f6e5d09982?auto=format&fit=crop&w=800&q=80',
-  'Public Administration': 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=800&q=80',
-  'Rural Livelihoods': 'https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?auto=format&fit=crop&w=800&q=80'
-};
-
 export default function LandingPage() {
   const navigate = useNavigate();
   const {
     problems,
     problemClusters,
-    setIsSubmitModalOpen
   } = useAppState();
 
   const [activeDetailProblemId, setActiveDetailProblemId] = useState(null);
@@ -114,22 +88,30 @@ export default function LandingPage() {
             </button>
           </div>
 
-          {/* Live Platform KPI Stats Ribbon */}
+          {/* Live Platform KPI Stats Ribbon with Animated Running Numbers */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 max-w-5xl mx-auto pt-8">
             <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-sm text-center">
-              <div className="text-2xl sm:text-3xl font-black text-slate-900 font-heading">1,284</div>
+              <div className="text-2xl sm:text-3xl font-black text-slate-900 font-heading">
+                <AnimatedCounter start={0} end={1284} duration={1800} />
+              </div>
               <div className="text-xs text-slate-500 font-medium mt-1">Reported Challenges</div>
             </div>
             <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-sm text-center">
-              <div className="text-2xl sm:text-3xl font-black text-emerald-700 font-heading">400+</div>
+              <div className="text-2xl sm:text-3xl font-black text-emerald-700 font-heading">
+                <AnimatedCounter start={0} end={400} duration={1800} suffix="+" />
+              </div>
               <div className="text-xs text-slate-500 font-medium mt-1">Challenges Solved</div>
             </div>
             <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-sm text-center">
-              <div className="text-2xl sm:text-3xl font-black text-emerald-800 font-heading">₹10.85 Cr</div>
+              <div className="text-2xl sm:text-3xl font-black text-emerald-800 font-heading">
+                <AnimatedCounter start={1.0} end={10.85} decimals={2} duration={2000} prefix="₹" suffix=" Cr" />
+              </div>
               <div className="text-xs text-slate-500 font-medium mt-1">Grants Disbursed</div>
             </div>
             <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-sm text-center">
-              <div className="text-2xl sm:text-3xl font-black text-amber-600 font-heading">65,0000+</div>
+              <div className="text-2xl sm:text-3xl font-black text-amber-600 font-heading">
+                <AnimatedCounter start={0} end={65000} duration={2200} suffix="+" />
+              </div>
               <div className="text-xs text-slate-500 font-medium mt-1">Citizens Impacted</div>
             </div>
           </div>
@@ -153,7 +135,7 @@ export default function LandingPage() {
           {displayList.map((p) => {
             const domainKey = p.domain || p.primaryDomain || 'Water Resources';
             const ticket = p.ticketId || p.id;
-            const imageUrl = p.evidence?.[0]?.url || DOMAIN_IMAGES[domainKey] || 'https://images.unsplash.com/photo-1541888946425-d0fbb18086f6?auto=format&fit=crop&w=800&q=80';
+            const imageUrl = p.evidence?.[0]?.url || 'https://images.unsplash.com/photo-1541888946425-d0fbb18086f6?auto=format&fit=crop&w=800&q=80';
 
             return (
               <div
@@ -192,21 +174,12 @@ export default function LandingPage() {
                     </p>
                   </div>
 
-                  {/* Key Social Impact Metric Highlight */}
-                  {p.socialImpact && (
-                    <div className="p-3 rounded-xl bg-emerald-50/70 border border-emerald-100 flex items-center justify-between text-xs">
-                      <span className="text-slate-600 font-medium">{p.socialImpact.metricName || 'Key Social Impact'}:</span>
-                      <strong className="text-emerald-800 font-black">{p.socialImpact.metricValue || 'Verified'}</strong>
-                    </div>
-                  )}
+                 
 
                   {/* Institution & Action Row */}
                   <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
-                    <span className="flex items-center space-x-1 truncate max-w-[180px] text-slate-500">
-                      <GraduationCap className="w-3.5 h-3.5 text-emerald-700 flex-shrink-0" />
-                      <span className="font-semibold text-slate-800 truncate">
-                        {p.allocatedUniversity?.name || 'HEI Lab'}
-                      </span>
+                    <span>
+                      
                     </span>
                     <span className="text-emerald-700 font-bold flex items-center space-x-1 group-hover:translate-x-1 transition-transform whitespace-nowrap">
                       <span>View Solution</span>

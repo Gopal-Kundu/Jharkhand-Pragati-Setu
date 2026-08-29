@@ -60,11 +60,7 @@ export default function LoadingScreen({ message = 'Loading Jharkhand Pragati Set
           </div>
         </div>
 
-        {/* Footer Government Tag */}
-        <div className="mt-10 inline-flex items-center space-x-1.5 px-3 py-1 rounded-full bg-white/80 border border-slate-200 text-[11px] font-bold text-slate-600 shadow-sm backdrop-blur-sm">
-          <span className="w-1.5 h-1.5 rounded-full bg-emerald-600" />
-          <span>Government of Jharkhand</span>
-        </div>
+        
 
       </div>
 
