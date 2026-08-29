@@ -13,11 +13,6 @@ export const protect = async (req, res, next) => {
   try {
     let token = req.cookies?.token;
 
-    // Optional Bearer token header fallback for external API testing
-    if (!token && req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
-      token = req.headers.authorization.split(' ')[1];
-    }
-
     if (!token) {
       return res.status(401).json({
         success: false,
@@ -66,33 +61,7 @@ export const authorizeRoles = (...allowedRoles) => {
   };
 };
 
-/**
- * Optional Authentication Middleware
- * If token is present and valid, attaches `req.user`. If not present, proceeds silently without error.
- */
-export const optionalAuth = async (req, res, next) => {
-  try {
-    let token = req.cookies?.token;
-
-    if (!token && req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
-      token = req.headers.authorization.split(' ')[1];
-    }
-
-    if (token) {
-      const decoded = jwt.verify(token, process.env.JWT_SECRET || 'sih_2026_default_secret');
-      const user = await User.findById(decoded.id).select('-password');
-      if (user) {
-        req.user = user;
-      }
-    }
-  } catch (error) {
-    // Ignore invalid/expired token for optional auth
-  }
-  next();
-};
-
 export default {
   protect,
-  optionalAuth,
   authorizeRoles
 };

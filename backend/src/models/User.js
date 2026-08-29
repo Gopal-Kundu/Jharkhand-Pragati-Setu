@@ -1,5 +1,4 @@
 import mongoose from 'mongoose';
-import bcrypt from 'bcryptjs';
 
 /**
  * Consolidated User Schema
@@ -63,7 +62,7 @@ const userSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: 'IndustryPartner',
       default: null
-    },
+    }, 
     notifications: [
       {
         title: { type: String, required: true },

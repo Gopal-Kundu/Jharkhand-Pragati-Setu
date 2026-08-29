@@ -15,7 +15,7 @@ import {
   getTripartiteProposalsForGovt
 } from '../controllers/problemController.js';
 import upload from '../middleware/uploadMiddleware.js';
-import { protect, optionalAuth, authorizeRoles } from '../middleware/authMiddleware.js';
+import { protect, authorizeRoles } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
 
@@ -34,7 +34,7 @@ router.patch('/proposals/:proposalId/govt-approve', protect, approveTripartitePr
 // Multer accepts array of evidence files (photos, videos, docs) under any field name
 router.route('/')
   .get(getProblems)
-  .post(optionalAuth, upload.any(), createProblem);
+  .post(upload.any(), createProblem);
 
 router.route('/:id')
   .get(getProblemById);

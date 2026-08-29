@@ -13,19 +13,16 @@ const isHttps = process.env.NODE_ENV === 'production' || process.env.VERCEL === 
  * @param {Object} res - Express Response object
  * @param {string} userId - Mongo ID of the authenticated user
  */
+const cookieOptions = {
+  expires: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
+  httpOnly: true,
+  secure: true,
+  sameSite: true
+};
 const sendTokenCookie = (res, userId) => {
   const token = jwt.sign({ id: userId }, process.env.JWT_SECRET || 'sih_2026_default_secret', {
     expiresIn: '7d'
   });
-
-  const cookieOptions = {
-    expires: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
-    httpOnly: true, // Prevents XSS attacks by disallowing client-side JS access
-    secure: isHttps, // Required for SameSite=None on HTTPS
-    sameSite: isHttps ? 'none' : 'lax', // Required for cross-domain cookie transmission
-    path: '/',
-    partitioned: true // Enables CHIPS for cross-site cookie partitioning on Vercel
-  };
 
   res.cookie('token', token, cookieOptions);
   return token;
@@ -74,11 +71,10 @@ export const register = async (req, res) => {
     });
 
     // Set secure HTTP-Only cookie & get token
-    const token = sendTokenCookie(res, user._id);
+    sendTokenCookie(res, user._id);
 
     return res.status(201).json({
       success: true,
-      token,
       message: `User registered successfully with role '${user.role}'`,
       user: {
         _id: user._id,
@@ -136,11 +132,10 @@ export const login = async (req, res) => {
     }
 
     // Set secure HTTP-Only cookie & get token
-    const token = sendTokenCookie(res, user._id);
+    sendTokenCookie(res, user._id);
 
     return res.status(200).json({
       success: true,
-      token,
       message: `Welcome back, ${user.name}!`,
       user: {
         _id: user._id,
@@ -169,37 +164,8 @@ export const login = async (req, res) => {
  * @access  Public
  */
 export const logout = async (req, res) => {
-  try {
-    const isProd = process.env.NODE_ENV === 'production' || process.env.VERCEL === '1' || Boolean(process.env.CLIENT_URL && process.env.CLIENT_URL.startsWith('https'));
-
-    const clearOptions = {
-      httpOnly: true,
-      secure: isProd,
-      sameSite: isProd ? 'none' : 'lax',
-      path: '/',
-      expires: new Date(0),
-      maxAge: 0
-    };
-
-    // 1. Clear partitioned cookie (Chrome / Edge CHIPS)
-    res.clearCookie('token', { ...clearOptions, partitioned: true });
-    res.cookie('token', '', { ...clearOptions, partitioned: true });
-
-    // 2. Clear standard unpartitioned cookie (Safari / Firefox / Local)
-    res.clearCookie('token', clearOptions);
-    res.cookie('token', '', clearOptions);
-
-    return res.status(200).json({
-      success: true,
-      message: 'Logged out successfully. Cookie cleared.'
-    });
-  } catch (error) {
-    console.error('[Auth Logout Error]:', error);
-    return res.status(500).json({
-      success: false,
-      message: error.message || 'Server error during logout'
-    });
-  }
+  res.clearCookie('token', cookieOptions);
+  return res.status(200).json({ success: true, message: 'Logged out successfully' });
 };
 
 /**
