@@ -1,13 +1,11 @@
-import React, { useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useDispatch } from 'react-redux';
 import { StateProvider } from './context/StateContext';
 import { fetchSolvedChallenges } from './store/slices/ecosystemSlice';
 import { fetchCurrentUser } from './store/slices/authSlice';
-
 import ErrorBoundary from './components/common/ErrorBoundary';
-
-// Layout & Pages
+import LoadingScreen from './components/common/LoadingScreen';
 import MainLayout from './components/layout/MainLayout';
 import LandingPage from './pages/LandingPage';
 import CommunityPage from './pages/CommunityPage';
@@ -19,13 +17,30 @@ import AuthPage from './pages/AuthPage';
 
 function AppRouter() {
   const dispatch = useDispatch();
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     // 1. fetchSolvedChallenges(6) -> GET /api/problems?resolutionStatus=solved&limit=6
     // 2. fetchCurrentUser() -> Check HTTP-Only cookie session on /api/auth/me
-    dispatch(fetchSolvedChallenges(6));
-    dispatch(fetchCurrentUser());
+    const initializeAppData = async () => {
+      try {
+        await Promise.allSettled([
+          dispatch(fetchSolvedChallenges(6)),
+          dispatch(fetchCurrentUser())
+        ]);
+      } catch (error) {
+        console.error('App initialization error:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    initializeAppData();
   }, [dispatch]);
+
+  if (isLoading) {
+    return <LoadingScreen />;
+  }
 
   return (
     <BrowserRouter>
