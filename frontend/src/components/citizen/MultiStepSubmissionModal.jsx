@@ -3,7 +3,7 @@ import { useAppState } from '../../context/StateContext';
 import { aiApi } from '../../services/aiApi';
 import { analyzeProblemSubmission } from '../../services/aiIntelligenceEngine';
 import InteractiveMapPicker from '../common/InteractiveMapPicker';
-import MarkdownRenderer from '../common/MarkdownRenderer';
+import { toast } from 'sonner';
 import { 
   X, 
   Sparkles, 
@@ -22,7 +22,9 @@ import {
   Check,
   Trash2,
   Film,
-  FileCheck
+  FileCheck,
+  ShieldCheck,
+  AlertTriangle
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
@@ -41,36 +43,34 @@ export default function MultiStepSubmissionModal() {
   const [isRecording, setIsRecording] = useState(false);
   const fileInputRef = useRef(null);
 
+  // Form State initialized empty with clear placeholders
   const [formData, setFormData] = useState({
-    name: 'Sombari Devi',
-    phone: '+91 94311 55678',
+    name: '',
+    phone: '',
     submitterType: 'Citizen', // Citizen, Community Group, Gram Panchayat, SHG
     title: '',
-    narrative: 'The check-dam pond in our village dries up every summer by February. Over 400 households have no water for vegetable farming and livestock. Handpumps yield dirty iron water.',
-    frequency: 'Seasonal (Repeats every summer)',
-    urgency: 'High',
-    duration: 'Existed for over 4 years',
-    previousAttempts: 'Villagers dug traditional trench but it silted up.',
+    narrative: '',
+    frequency: '',
+    urgency: 'Medium',
+    duration: '',
+    previousAttempts: '',
     
     // Evidence
-    mediaFiles: [
-      { type: 'image', caption: 'Silted pond catchment basin', url: 'https://images.unsplash.com/photo-1578328819058-b69f3a3b0f6b?auto=format&fit=crop&w=800&q=80' },
-      { type: 'image', caption: 'Defunct irrigation canal', url: 'https://images.unsplash.com/photo-1509316975850-ff9c5deb0cd9?auto=format&fit=crop&w=800&q=80' }
-    ],
+    mediaFiles: [],
 
     // Location
-    district: 'khunti',
-    districtName: 'Khunti',
-    block: 'Torpa',
-    panchayat: 'Dormba',
-    village: 'Dormba',
-    gps: { lat: 23.0841, lng: 85.2514 },
+    district: 'ranchi',
+    districtName: 'Ranchi',
+    block: '',
+    panchayat: '',
+    village: '',
+    gps: { lat: 23.3441, lng: 85.3096 },
 
     // Impact
-    affectedPopulation: '4800',
-    economicImpact: 'Farmers lose ₹25,000 per family in rabi crop revenue.',
-    healthImpact: 'Water-borne diarrhea outbreaks in hot months.',
-    vulnerableGroup: 'Women and children travel 3.5 km daily on foot.'
+    affectedPopulation: '',
+    economicImpact: '',
+    healthImpact: '',
+    vulnerableGroup: ''
   });
 
   const handleFileSelect = (e) => {
@@ -117,7 +117,7 @@ export default function MultiStepSubmissionModal() {
       ...prev,
       district: dId,
       districtName: dObj ? dObj.name : 'Ranchi',
-      block: dObj && dObj.blocks ? dObj.blocks[0] : 'Sadar'
+      block: dObj && dObj.blocks ? dObj.blocks[0] : ''
     }));
   };
 
@@ -127,51 +127,71 @@ export default function MultiStepSubmissionModal() {
       setIsRecording(false);
       setFormData(prev => ({
         ...prev,
-        narrative: prev.narrative + ' Also, the local primary school drinking water well has gone completely dry.'
+        narrative: prev.narrative ? prev.narrative + ' Also, drinking water and irrigation water scarcity during summer.' : 'Drinking water and irrigation water scarcity during summer.'
       }));
-    }, 2000);
+    }, 1500);
   };
 
-  // Run AI analysis on step 4 transition via backend AI API
+  // Run AI analysis on step 4 transition via backend AI API (Only Assigns Domain & Checks Location Duplicates)
   const handleProceedToReview = async () => {
     try {
       const response = await aiApi.categorizeProblem({
         title: formData.title || `${formData.narrative.slice(0, 50)}...`,
         description: formData.narrative,
-        location: { district: formData.districtName, block: formData.block },
+        location: {
+          district: formData.districtName,
+          block: formData.block,
+          panchayat: formData.panchayat
+        },
         submitterRole: formData.submitterType
       });
+
       if (response.success && response.data) {
         const aiData = response.data;
+        const isDup = Boolean(aiData.duplicateCheck?.isDuplicate);
         setAiPreview({
-          primaryDomain: aiData.domain,
-          secondaryDomains: aiData.tags || [],
-          suggestedProjectTitle: `${aiData.domain} Innovation Intervention in ${formData.districtName}`,
-          suggestedProjectTitleHi: `${formData.districtName} में ${aiData.domain} नवाचार पहल`,
-          severity: aiData.urgency || 'High',
-          urgencyScore: `${aiData.severity || 8.5}/10`,
-          universityMatches: (aiData.recommendedUniversities || []).map(u => ({
-            heiId: u.universityId,
-            name: u.name,
-            matchScore: u.matchScore,
-            reason: u.reason
-          })),
-          duplicatesFound: aiData.duplicateCheck?.isDuplicate ? [aiData.duplicateCheck] : [],
-          recommendedDisciplines: aiData.recommendedDisciplines || []
+          domain: aiData.domain || 'Others',
+          isDuplicate: isDup,
+          duplicateTicketId: aiData.duplicateCheck?.matchedTicketId || '',
+          duplicateReason: aiData.duplicateCheck?.reason || ''
         });
+
+        if (isDup) {
+          toast.error('Someone from your locality has already submitted this problem.');
+        }
       } else {
         const preview = analyzeProblemSubmission(formData, []);
-        setAiPreview(preview);
+        setAiPreview({
+          domain: preview.domain || 'Others',
+          isDuplicate: preview.isDuplicate,
+          duplicateTicketId: preview.duplicateTicketId,
+          duplicateReason: preview.duplicateReason
+        });
       }
     } catch (err) {
       const preview = analyzeProblemSubmission(formData, []);
-      setAiPreview(preview);
+      setAiPreview({
+        domain: preview.domain || 'Others',
+        isDuplicate: preview.isDuplicate,
+        duplicateTicketId: preview.duplicateTicketId,
+        duplicateReason: preview.duplicateReason
+      });
     }
     setStep(5);
   };
 
   const handleFinalSubmit = async () => {
+    if (aiPreview?.isDuplicate) {
+      toast.error('Someone from your locality has already submitted this problem.');
+      return;
+    }
+
     const res = await submitCitizenProblem(formData);
+    if (!res || !res.success || res.duplicate) {
+      toast.error(res?.message || 'Someone from your locality has already submitted this problem.');
+      return;
+    }
+
     setSubmissionResult(res);
     try {
       confetti({ particleCount: 80, spread: 70, origin: { y: 0.6 } });
@@ -191,10 +211,10 @@ export default function MultiStepSubmissionModal() {
             </div>
             <div>
               <h3 className="font-extrabold text-base tracking-tight">
-                {lang === 'hi' ? 'नागरिक समस्या रिपोर्टिंग प्रणाली' : 'Citizen Problem Intake & AI Structuring'}
+                {lang === 'hi' ? 'नागरिक समस्या रिपोर्टिंग प्रणाली' : 'Citizen Problem Intake & AI Categorization'}
               </h3>
               <p className="text-xs text-emerald-200/80 font-medium">
-                {lang === 'hi' ? 'सरल भाषा में समस्या दर्ज करें - AI इसे अनुसंधान एवं समाधान में बदलेगा' : 'Transform real-world grassroots problems into university innovation projects'}
+                {lang === 'hi' ? 'सरल भाषा में समस्या दर्ज करें - AI डोमेन निर्धारित करेगा' : 'Submit societal challenge — AI will assign the domain and check location duplicates'}
               </p>
             </div>
           </div>
@@ -248,44 +268,40 @@ export default function MultiStepSubmissionModal() {
 
               <div>
                 <h4 className="text-xl font-extrabold text-slate-900">
-                  {lang === 'hi' ? 'समस्या AI द्वारा कॉलेज को भेजी गई!' : 'AI Checked & Auto-Sent to College R&D!'}
+                  {lang === 'hi' ? 'समस्या सफलतापूर्वक पंजीकृत!' : 'Problem Statement Successfully Registered!'}
                 </h4>
-                <p className="text-xs text-slate-600 max-w-md mx-auto mt-1">
-                  AI analyzed your photos, videos, and GPS details, identified the root cause, and automatically dispatched the problem directly to the ideal college authority R&D inbox.
+                <p className="text-xs text-slate-500 mt-1">
+                  Assigned Domain: <strong className="text-emerald-700 font-bold">{submissionResult.domain || aiPreview?.domain || 'Others'}</strong>
                 </p>
               </div>
 
-              <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 max-w-md mx-auto text-left space-y-2 text-xs">
-                <div className="flex justify-between border-b border-slate-200 pb-1.5">
-                  <span className="text-slate-500">Problem ID:</span>
-                  <span className="font-mono font-bold text-emerald-800">#{submissionResult.clusterId}</span>
-                </div>
-                <div className="flex justify-between border-b border-slate-200 pb-1.5">
-                  <span className="text-slate-500">Auto-Matched College:</span>
-                  <span className="font-bold text-purple-800 bg-purple-50 px-2 py-0.5 rounded">
-                    🎓 {submissionResult.matchedHei?.name || 'BIT Mesra'} ({submissionResult.matchedHei?.matchScore || 96}% Fit)
+              <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 max-w-md mx-auto space-y-2 text-left text-xs">
+                <div className="flex justify-between items-center pb-2 border-b border-slate-200">
+                  <span className="text-slate-500 font-medium">Tracking Ticket ID:</span>
+                  <span className="font-mono font-black text-emerald-700 text-sm bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                    #{submissionResult.clusterId}
                   </span>
                 </div>
-                <div className="flex justify-between border-b border-slate-200 pb-1.5">
+                <div className="flex justify-between items-center">
+                  <span className="text-slate-500">Target Locality:</span>
+                  <span className="font-semibold text-slate-800">{formData.districtName}, {formData.block || 'Block'}</span>
+                </div>
+                <div className="flex justify-between items-center">
                   <span className="text-slate-500">Status:</span>
-                  <span className="font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded">
-                    Sent to College Authority Inbox
+                  <span className="bg-blue-100 text-blue-800 px-2 py-0.5 rounded font-bold text-[10px]">
+                    Submitted & Queued for Triage
                   </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-500">College Action:</span>
-                  <span className="font-semibold text-indigo-700">Professors & Students Reviewing Problem Fix</span>
                 </div>
               </div>
 
-              <div className="flex items-center justify-center space-x-3 pt-2">
+              <div className="pt-2 flex items-center justify-center space-x-3">
                 <button
                   onClick={() => {
-                    setSelectedClusterId(submissionResult.clusterId);
-                    setActiveView('cluster_detail');
                     setIsSubmitModalOpen(false);
+                    setSelectedClusterId(submissionResult.clusterId);
+                    setActiveView('citizen_track');
                   }}
-                  className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-4 py-2.5 rounded-xl shadow cursor-pointer transition-all flex items-center space-x-1.5"
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-5 py-2.5 rounded-xl shadow transition-all flex items-center space-x-1.5 cursor-pointer"
                 >
                   <span>Track Live Problem Progress</span>
                   <ArrowRight className="w-4 h-4" />
@@ -306,7 +322,7 @@ export default function MultiStepSubmissionModal() {
                   <div className="bg-emerald-50/70 border border-emerald-200/80 rounded-xl p-3 text-xs text-emerald-900 flex items-start space-x-2">
                     <Sparkles className="w-4 h-4 text-emerald-700 flex-shrink-0 mt-0.5" />
                     <p>
-                      <strong>Simple Language Prompt:</strong> Describe what you see in your own words. You do not need technical terms—our AI will translate it into research requirements.
+                      <strong>Simple Language Prompt:</strong> Describe what you see in your own words. Our AI will automatically assign the appropriate societal domain.
                     </p>
                   </div>
 
@@ -315,6 +331,7 @@ export default function MultiStepSubmissionModal() {
                       <label className="block text-xs font-bold text-slate-700 mb-1">Your Name / Group</label>
                       <input
                         type="text"
+                        placeholder="e.g. Sombari Devi / Local Group"
                         value={formData.name}
                         onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                         className="w-full text-xs p-2.5 rounded-lg border border-slate-300 text-slate-900 bg-white placeholder:text-slate-400 font-medium focus:ring-2 focus:ring-emerald-500 focus:outline-none"
@@ -364,6 +381,7 @@ export default function MultiStepSubmissionModal() {
                     </div>
                     <textarea
                       rows={3}
+                      placeholder="Describe the issue in detail (e.g. The check-dam pond dries up every summer, causing water scarcity for 400 households...)"
                       value={formData.narrative}
                       onChange={(e) => setFormData({ ...formData, narrative: e.target.value })}
                       className="w-full text-xs p-2.5 rounded-lg border border-slate-300 text-slate-900 bg-white placeholder:text-slate-400 font-medium focus:ring-2 focus:ring-emerald-500 focus:outline-none"
@@ -376,20 +394,22 @@ export default function MultiStepSubmissionModal() {
                       <select
                         value={formData.urgency}
                         onChange={(e) => setFormData({ ...formData, urgency: e.target.value })}
-                        className="w-full text-xs p-2 rounded-lg border border-slate-300 text-slate-900 bg-white font-medium focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                        className="w-full text-xs p-2.5 rounded-lg border border-slate-300 text-slate-900 bg-white font-medium focus:ring-2 focus:ring-emerald-500 focus:outline-none"
                       >
-                        <option value="Critical">Critical (Immediate Health/Safety Hazard)</option>
-                        <option value="High">High (Seasonal Livelihood/Water Threat)</option>
-                        <option value="Medium">Medium (Chronic recurring infrastructure need)</option>
+                        <option value="Critical">Critical (Immediate Hazard)</option>
+                        <option value="High">High (Seasonal/Urgent Threat)</option>
+                        <option value="Medium">Medium (Recurring Need)</option>
+                        <option value="Low">Low (General Improvement)</option>
                       </select>
                     </div>
                     <div>
                       <label className="block text-xs font-bold text-slate-700 mb-1">How long has it existed?</label>
                       <input
                         type="text"
+                        placeholder="e.g. Over 3 years / Recurring seasonally"
                         value={formData.duration}
                         onChange={(e) => setFormData({ ...formData, duration: e.target.value })}
-                        className="w-full text-xs p-2 rounded-lg border border-slate-300 text-slate-900 bg-white placeholder:text-slate-400 font-medium focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                        className="w-full text-xs p-2.5 rounded-lg border border-slate-300 text-slate-900 bg-white placeholder:text-slate-400 font-medium focus:ring-2 focus:ring-emerald-500 focus:outline-none"
                       />
                     </div>
                   </div>
@@ -454,47 +474,20 @@ export default function MultiStepSubmissionModal() {
                     </div>
 
                     {formData.mediaFiles.length === 0 ? (
-                      <div className="text-center py-4 bg-slate-50 rounded-xl border border-slate-200 text-xs text-slate-400">
-                        No files attached yet. Click "Browse Device" above to add photos or videos.
+                      <div className="text-center py-4 bg-slate-50 border border-slate-200 rounded-xl text-slate-400 text-xs">
+                        No evidence files attached yet. (Optional)
                       </div>
                     ) : (
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                      <div className="space-y-2 max-h-48 overflow-y-auto">
                         {formData.mediaFiles.map((m, idx) => (
-                          <div key={idx} className="bg-slate-50 hover:bg-slate-100/80 rounded-xl p-2.5 flex items-center justify-between border border-slate-200 transition-colors">
-                            <div className="flex items-center space-x-2.5 min-w-0">
-                              {m.type === 'video' ? (
-                                <div className="w-12 h-12 rounded-lg bg-indigo-100 text-indigo-700 flex items-center justify-center flex-shrink-0">
-                                  <Film className="w-6 h-6" />
-                                </div>
-                              ) : m.type === 'document' ? (
-                                <div className="w-12 h-12 rounded-lg bg-amber-100 text-amber-700 flex items-center justify-center flex-shrink-0">
-                                  <FileCheck className="w-6 h-6" />
-                                </div>
-                              ) : (
-                                <img 
-                                  src={m.url} 
-                                  alt={m.caption} 
-                                  className="w-12 h-12 object-cover rounded-lg flex-shrink-0 border border-slate-200" 
-                                  onError={(e) => {
-                                    e.target.onerror = null;
-                                    e.target.src = 'https://images.unsplash.com/photo-1578328819058-b69f3a3b0f6b?auto=format&fit=crop&w=400&q=80';
-                                  }}
-                                />
-                              )}
-                              <div className="min-w-0">
-                                <p className="text-[11px] font-bold text-slate-800 truncate" title={m.caption}>
-                                  {m.caption}
-                                </p>
-                                <div className="flex items-center space-x-1 mt-0.5">
-                                  <span className="text-[10px] text-emerald-700 font-semibold uppercase tracking-wider bg-emerald-50 px-1.5 py-0.2 rounded border border-emerald-200">
-                                    {m.type}
-                                  </span>
-                                  {m.size && (
-                                    <span className="text-[10px] text-slate-400 font-mono">
-                                      • {m.size}
-                                    </span>
-                                  )}
-                                </div>
+                          <div key={idx} className="flex items-center justify-between bg-slate-50 border border-slate-200 rounded-xl p-2.5">
+                            <div className="flex items-center space-x-2.5 overflow-hidden">
+                              <div className="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center flex-shrink-0">
+                                {m.type === 'video' ? <Film className="w-4 h-4" /> : m.type === 'document' ? <FileCheck className="w-4 h-4" /> : <ImageIcon className="w-4 h-4" />}
+                              </div>
+                              <div className="overflow-hidden">
+                                <p className="text-xs font-bold text-slate-800 truncate">{m.caption || `Evidence File ${idx + 1}`}</p>
+                                <p className="text-[10px] text-slate-500 uppercase">{m.type}</p>
                               </div>
                             </div>
 
@@ -514,7 +507,7 @@ export default function MultiStepSubmissionModal() {
                 </div>
               )}
 
-              {/* STEP 3: Interactive Map & Geographic Pinpoint */}
+              {/* STEP 3: Geographic Pinpoint */}
               {step === 3 && (
                 <div className="space-y-3.5 animate-in fade-in">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -533,15 +526,13 @@ export default function MultiStepSubmissionModal() {
 
                     <div>
                       <label className="block text-xs font-bold text-slate-700 mb-1">Block / Taluk</label>
-                      <select
+                      <input
+                        type="text"
+                        placeholder="e.g. Torpa / Sadar / Kanke"
                         value={formData.block}
                         onChange={(e) => setFormData({ ...formData, block: e.target.value })}
-                        className="w-full text-xs p-2.5 rounded-lg border border-slate-300 text-slate-900 bg-white font-medium focus:ring-2 focus:ring-emerald-500 focus:outline-none"
-                      >
-                        {(currentDistrictObj.blocks || ['Sadar']).map((b, i) => (
-                          <option key={i} value={b}>{b}</option>
-                        ))}
-                      </select>
+                        className="w-full text-xs p-2.5 rounded-lg border border-slate-300 text-slate-900 bg-white placeholder:text-slate-400 font-medium focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                      />
                     </div>
                   </div>
 
@@ -576,7 +567,7 @@ export default function MultiStepSubmissionModal() {
                       />
                     </div>
                     <div>
-                      <label className="block text-xs font-bold text-slate-700 mb-1">Village / Tola / Street Landmark</label>
+                      <label className="block text-xs font-bold text-slate-700 mb-1">Village / Tola / Landmark</label>
                       <input
                         type="text"
                         placeholder="e.g. Near Primary School Well"
@@ -598,17 +589,18 @@ export default function MultiStepSubmissionModal() {
                     </label>
                     <input
                       type="number"
+                      placeholder="e.g. 4800 citizens across 3 villages"
                       value={formData.affectedPopulation}
                       onChange={(e) => setFormData({ ...formData, affectedPopulation: e.target.value })}
                       className="w-full text-xs p-2.5 rounded-lg border border-slate-300 text-slate-900 bg-white placeholder:text-slate-400 font-medium focus:ring-2 focus:ring-emerald-500 focus:outline-none"
                     />
-                    <span className="text-[10px] text-slate-500">e.g. 4800 citizens across 3 villages</span>
                   </div>
 
                   <div>
                     <label className="block text-xs font-bold text-slate-700 mb-1">Economic & Livelihood Impact</label>
                     <input
                       type="text"
+                      placeholder="e.g. Farmers lose crop yield in dry months"
                       value={formData.economicImpact}
                       onChange={(e) => setFormData({ ...formData, economicImpact: e.target.value })}
                       className="w-full text-xs p-2.5 rounded-lg border border-slate-300 text-slate-900 bg-white placeholder:text-slate-400 font-medium focus:ring-2 focus:ring-emerald-500 focus:outline-none"
@@ -619,6 +611,7 @@ export default function MultiStepSubmissionModal() {
                     <label className="block text-xs font-bold text-slate-700 mb-1">Health & Vulnerable Groups Impact</label>
                     <input
                       type="text"
+                      placeholder="e.g. Women travel 3.5 km daily on foot"
                       value={formData.vulnerableGroup}
                       onChange={(e) => setFormData({ ...formData, vulnerableGroup: e.target.value })}
                       className="w-full text-xs p-2.5 rounded-lg border border-slate-300 text-slate-900 bg-white placeholder:text-slate-400 font-medium focus:ring-2 focus:ring-emerald-500 focus:outline-none"
@@ -627,65 +620,60 @@ export default function MultiStepSubmissionModal() {
                 </div>
               )}
 
-              {/* STEP 5: AI Review & Instant Insight Preview */}
+              {/* STEP 5: AI Review & Instant Domain Assignment */}
               {step === 5 && aiPreview && (
                 <div className="space-y-3.5 animate-in fade-in">
-                  <div className="bg-gradient-to-r from-emerald-900 to-teal-900 text-white rounded-xl p-4 space-y-2">
+                  {/* AI Assigned Domain Card */}
+                  <div className="bg-gradient-to-r from-emerald-900 to-teal-900 text-white rounded-xl p-4 space-y-2 shadow-md">
                     <div className="flex items-center justify-between">
                       <span className="text-xs font-extrabold text-amber-300 uppercase tracking-wider flex items-center space-x-1.5">
-                        <Sparkles className="w-3.5 h-3.5 animate-spin-slow" />
-                        <span>AI Problem Intelligence Engine</span>
+                        <Sparkles className="w-3.5 h-3.5" />
+                        <span>AI Domain Assignment</span>
                       </span>
-                      <span className="text-[11px] bg-emerald-700 px-2 py-0.5 rounded font-bold">
-                        Confidence: {(aiPreview.confidence * 100).toFixed(0)}%
+                      <span className="text-[11px] bg-emerald-700/80 border border-emerald-500/40 px-2 py-0.5 rounded font-bold text-emerald-100">
+                        Assigned
                       </span>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-2 text-xs pt-1">
-                      <div>
-                        <span className="text-emerald-300 text-[11px] block">Classified Domains:</span>
-                        <strong className="text-white">{aiPreview.primaryDomain}</strong>
-                        <span className="text-emerald-200 text-[10px] block">
-                          + {aiPreview.secondaryDomains.join(', ')}
-                        </span>
-                      </div>
-                      <div>
-                        <span className="text-emerald-300 text-[11px] block">Prioritization Score:</span>
-                        <strong className="text-amber-300 text-base">{aiPreview.prioritizationScore}/100</strong>
+                    <div className="pt-1">
+                      <span className="text-emerald-300 text-[11px] block font-medium">Classified Domain:</span>
+                      <div className="text-white text-lg font-black tracking-tight mt-0.5">
+                        {aiPreview.domain || 'Others'}
                       </div>
                     </div>
                   </div>
 
-                  {/* Structuring Breakdown */}
-                  <div className="bg-slate-50 rounded-xl p-3 border border-slate-200 space-y-2 text-xs">
-                    <h5 className="font-bold text-slate-800">Root Cause Hypothesis:</h5>
-                    <div className="text-slate-700 text-[11px] leading-relaxed">
-                      <MarkdownRenderer content={aiPreview.rootProblem} />
+                  {/* Locality Deduplication Status Card */}
+                  {aiPreview.isDuplicate ? (
+                    <div className="bg-red-50 border border-red-300 rounded-xl p-4 space-y-2 text-xs animate-in shake">
+                      <div className="flex items-center space-x-2 text-red-700 font-bold text-sm">
+                        <AlertTriangle className="w-5 h-5 flex-shrink-0" />
+                        <span>Duplicate Problem Detected in Locality</span>
+                      </div>
+                      <p className="text-red-800 text-xs leading-relaxed">
+                        Someone from your locality has already submitted this problem{aiPreview.duplicateTicketId ? ` (Ticket #${aiPreview.duplicateTicketId})` : ''}.
+                      </p>
+                      <p className="text-red-700 text-[11px]">
+                        To prevent duplicate tickets, submission is disabled. You can track the active ticket on the portal.
+                      </p>
                     </div>
+                  ) : (
+                    <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 space-y-1.5 text-xs">
+                      <div className="flex items-center space-x-2 text-emerald-800 font-bold text-sm">
+                        <ShieldCheck className="w-5 h-5 flex-shrink-0 text-emerald-600" />
+                        <span>Locality Deduplication Verified</span>
+                      </div>
+                      <p className="text-emerald-700 text-xs">
+                        No duplicate problems found in <strong>{formData.districtName}</strong>{formData.block ? `, ${formData.block}` : ''}. This is a unique problem statement.
+                      </p>
+                    </div>
+                  )}
 
-                    <h5 className="font-bold text-slate-800 pt-1">Required Academic Disciplines:</h5>
-                    <div className="flex flex-wrap gap-1">
-                      {aiPreview.requiredDisciplines.map((d, i) => (
-                        <span key={i} className="bg-white border border-slate-200 text-slate-700 px-2 py-0.5 rounded text-[10px] font-semibold">
-                          {d}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Matched Universities preview */}
-                  <div className="bg-purple-50 rounded-xl p-3 border border-purple-200 text-xs">
-                    <h5 className="font-bold text-purple-900 mb-1">Recommended University Research Matches:</h5>
-                    <div className="space-y-1">
-                      {aiPreview.universityMatches.slice(0, 2).map((m, i) => (
-                        <div key={i} className="flex justify-between items-center bg-white px-2.5 py-1.5 rounded border border-purple-100">
-                          <span className="font-semibold text-purple-950">{m.name}</span>
-                          <span className="font-bold text-purple-700 bg-purple-100 px-1.5 py-0.5 rounded text-[10px]">
-                            {m.matchScore}% Fit
-                          </span>
-                        </div>
-                      ))}
-                    </div>
+                  <div className="bg-slate-50 rounded-xl p-3 border border-slate-200 space-y-1 text-xs">
+                    <span className="text-slate-500 text-[11px] font-medium block">Problem Title:</span>
+                    <strong className="text-slate-900 block">{formData.title || 'Untitled Societal Challenge'}</strong>
+                    <span className="text-slate-500 text-[11px] font-medium block pt-1">Location:</span>
+                    <span className="text-slate-800 font-semibold">{formData.districtName}, {formData.block || 'Block'}{formData.panchayat ? `, ${formData.panchayat}` : ''}</span>
                   </div>
                 </div>
               )}
@@ -721,7 +709,7 @@ export default function MultiStepSubmissionModal() {
                     className="bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white font-bold text-xs px-4 py-2 rounded-xl shadow transition-all flex items-center space-x-1.5 cursor-pointer"
                   >
                     <Sparkles className="w-4 h-4 text-amber-300" />
-                    <span>Run AI Triage & Review</span>
+                    <span>Review & Assign Domain</span>
                   </button>
                 )}
 
@@ -729,10 +717,15 @@ export default function MultiStepSubmissionModal() {
                   <button
                     type="button"
                     onClick={handleFinalSubmit}
-                    className="bg-amber-500 hover:bg-amber-600 text-slate-950 font-extrabold text-xs px-5 py-2.5 rounded-xl shadow-md hover:shadow-lg transition-all flex items-center space-x-1.5 cursor-pointer"
+                    disabled={aiPreview?.isDuplicate}
+                    className={`${
+                      aiPreview?.isDuplicate 
+                        ? 'bg-slate-300 text-slate-500 cursor-not-allowed' 
+                        : 'bg-amber-500 hover:bg-amber-600 text-slate-950 font-extrabold shadow-md hover:shadow-lg cursor-pointer'
+                    } text-xs px-5 py-2.5 rounded-xl transition-all flex items-center space-x-1.5`}
                   >
                     <CheckCircle2 className="w-4 h-4" />
-                    <span>Confirm & Generate Challenge ID</span>
+                    <span>{aiPreview?.isDuplicate ? 'Duplicate - Submission Disabled' : 'Confirm & Generate Challenge ID'}</span>
                   </button>
                 )}
               </div>

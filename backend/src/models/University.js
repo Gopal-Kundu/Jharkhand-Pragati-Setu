@@ -93,11 +93,10 @@ const universitySchema = new mongoose.Schema(
     },
     notifications: [
       {
-        problemId: { type: mongoose.Schema.Types.ObjectId, ref: 'Problem' },
-        ticketId: { type: String, default: '' },
         title: { type: String, required: true },
-        message: { type: String, required: true },
-        domain: { type: String, default: '' },
+        description: { type: String, default: '' },
+        id: { type: mongoose.Schema.Types.ObjectId, default: () => new mongoose.Types.ObjectId() },
+        schemaName: { type: String, default: 'Problem' },
         read: { type: Boolean, default: false },
         createdAt: { type: Date, default: Date.now }
       }

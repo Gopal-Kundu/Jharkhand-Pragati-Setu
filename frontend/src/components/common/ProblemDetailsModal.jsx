@@ -449,23 +449,37 @@ export default function ProblemDetailsModal({ problemId, onClose }) {
                   </div>
 
                   <div className="relative pl-6 space-y-4 border-l-2 border-slate-200 ml-2">
-                    {problem.timeline.map((event, tIdx) => (
-                      <div key={tIdx} className="relative space-y-1">
-                        <div className="absolute -left-[31px] top-1 w-3.5 h-3.5 rounded-full bg-emerald-600 ring-4 ring-emerald-100" />
-                        <div className="flex flex-wrap items-center justify-between gap-1 text-xs">
-                          <span className="font-bold text-slate-900">{event.action}</span>
-                          <span className="text-[10px] text-slate-400 font-mono">
-                            {event.timestamp ? new Date(event.timestamp).toLocaleDateString() : 'Active'}
-                          </span>
+                    {problem.timeline.map((event, tIdx) => {
+                      const colorMap = {
+                        green: 'bg-emerald-600 ring-emerald-100',
+                        emerald: 'bg-emerald-600 ring-emerald-100',
+                        blue: 'bg-blue-600 ring-blue-100',
+                        indigo: 'bg-indigo-600 ring-indigo-100',
+                        amber: 'bg-amber-500 ring-amber-100',
+                        rose: 'bg-rose-600 ring-rose-100',
+                        purple: 'bg-purple-600 ring-purple-100'
+                      };
+                      const dotStyle = colorMap[event.colour] || colorMap.green;
+                      const eventTime = event.createdAt || event.timestamp;
+
+                      return (
+                        <div key={tIdx} className="relative space-y-1">
+                          <div className={`absolute -left-[31px] top-1 w-3.5 h-3.5 rounded-full ring-4 ${dotStyle}`} />
+                          <div className="flex flex-wrap items-center justify-between gap-1 text-xs">
+                            <span className="font-bold text-slate-900">{event.title || event.action}</span>
+                            <span className="text-[10px] text-slate-400 font-mono">
+                              {eventTime ? new Date(eventTime).toLocaleDateString() : 'Active'}
+                            </span>
+                          </div>
+                          <p className="text-xs text-slate-600 leading-relaxed">{event.description || event.note}</p>
+                          {event.officer && (
+                            <span className="text-[10.5px] font-medium text-slate-500 block">
+                              Logged by: <strong>{event.officer}</strong> {event.role ? `(${event.role.toUpperCase()})` : ''}
+                            </span>
+                          )}
                         </div>
-                        <p className="text-xs text-slate-600 leading-relaxed">{event.note}</p>
-                        {event.officer && (
-                          <span className="text-[10.5px] font-medium text-slate-500 block">
-                            Logged by: <strong>{event.officer}</strong> {event.role ? `(${event.role.toUpperCase()})` : ''}
-                          </span>
-                        )}
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
               )}

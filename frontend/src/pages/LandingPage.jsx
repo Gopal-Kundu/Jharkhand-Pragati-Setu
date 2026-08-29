@@ -135,7 +135,7 @@ export default function LandingPage() {
           {displayList.map((p) => {
             const domainKey = p.domain || p.primaryDomain || 'Water Resources';
             const ticket = p.ticketId || p.id;
-            const imageUrl = p.evidence?.[0]?.url || 'https://images.unsplash.com/photo-1541888946425-d0fbb18086f6?auto=format&fit=crop&w=800&q=80';
+            const imageUrl = p.evidence?.[0]?.url || p.evidenceUrl || '';
 
             return (
               <div
@@ -143,24 +143,41 @@ export default function LandingPage() {
                 onClick={() => handleOpenProblem(ticket)}
                 className="group rounded-3xl bg-white border border-slate-200 shadow-sm hover:border-emerald-500/60 hover:shadow-xl hover:shadow-emerald-500/10 transition-all cursor-pointer flex flex-col justify-between overflow-hidden hover:-translate-y-1"
               >
-                {/* 1. Problem Image with Location Overlay */}
-                <div className="relative h-48 sm:h-52 w-full overflow-hidden bg-slate-100">
-                  <img
-                    src={imageUrl}
-                    alt={p.title}
-                    className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-500"
-                    loading="lazy"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/10" />
+                {/* 1. Problem Image with Location Overlay or Domain Banner */}
+                {imageUrl ? (
+                  <div className="relative h-48 sm:h-52 w-full overflow-hidden bg-slate-100">
+                    <img
+                      src={imageUrl}
+                      alt={p.title}
+                      className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-500"
+                      loading="lazy"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/10" />
 
-                  {/* Location Badge Only */}
-                  <div className="absolute bottom-3 left-3 flex items-center">
-                    <span className="flex items-center space-x-1.5 px-3 py-1 rounded-xl bg-black/60 backdrop-blur-md text-white text-xs font-bold border border-white/20 shadow-md">
+                    {/* Location Badge Only */}
+                    <div className="absolute bottom-3 left-3 flex items-center">
+                      <span className="flex items-center space-x-1.5 px-3 py-1 rounded-xl bg-black/60 backdrop-blur-md text-white text-xs font-bold border border-white/20 shadow-md">
+                        <MapPin className="w-3.5 h-3.5 text-emerald-400" />
+                        <span>{p.location?.district || p.districtName || 'Jharkhand'}</span>
+                      </span>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="relative h-36 w-full bg-gradient-to-br from-slate-900 via-slate-800 to-emerald-950 p-4 flex flex-col justify-between">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-emerald-300 bg-white/10 backdrop-blur-md px-2.5 py-1 rounded-xl border border-white/10">
+                        {domainKey}
+                      </span>
+                      <span className="text-[10px] font-bold text-slate-300 bg-black/40 px-2 py-0.5 rounded-lg">
+                        #{ticket}
+                      </span>
+                    </div>
+                    <div className="flex items-center space-x-1.5 text-slate-300 text-xs font-medium">
                       <MapPin className="w-3.5 h-3.5 text-emerald-400" />
                       <span>{p.location?.district || p.districtName || 'Jharkhand'}</span>
-                    </span>
+                    </div>
                   </div>
-                </div>
+                )}
 
                 {/* 2. Card Body Description */}
                 <div className="p-5 sm:p-6 space-y-3 flex-1 flex flex-col justify-between">

@@ -44,7 +44,10 @@ export const submitProblemThunk = createAsyncThunk('ecosystem/submitProblem', as
     const data = await problemApi.submitProblem(formData);
     return data.problem;
   } catch (error) {
-    return rejectWithValue(error.message);
+    if (error.response?.data) {
+      return rejectWithValue(error.response.data);
+    }
+    return rejectWithValue({ message: error.message });
   }
 });
 

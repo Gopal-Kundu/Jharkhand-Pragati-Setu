@@ -1,9 +1,12 @@
 import mongoose from 'mongoose';
 
 /**
- * Comprehensive Problem Schema
- * Implements the full SIH 2026 lifecycle:
- * Citizens → Government Triage → Universities/Students → Industry/Startups → Real-World Solution
+ * Problem Schema
+ * 
+ * Standardized Problem Registry for SIH 2026:
+ * - Domain is assigned by AI from 10 canonical domains
+ * - Duplicates by location are checked upon submission (if duplicate found, submission is rejected)
+ * - Triage, multidisciplinary proposal formulation, CSR industry matching, and milestone tracking
  */
 const problemSchema = new mongoose.Schema(
   {
@@ -36,7 +39,8 @@ const problemSchema = new mongoose.Schema(
         'Urban Development',
         'Accessibility',
         'Public Administration',
-        'Rural Livelihoods'
+        'Rural Livelihoods',
+        'Others'
       ],
       index: true
     },
@@ -81,32 +85,10 @@ const problemSchema = new mongoose.Schema(
         uploadedAt: { type: Date, default: Date.now }
       }
     ],
-    aiAnalysis: {
-      domain: { type: String, default: '' },
-      category: { type: String, default: '' },
-      severity: { type: Number, min: 1, max: 10, default: 5 },
-      confidence: { type: Number, min: 0, max: 1, default: 0.85 },
-      urgency: { type: String, enum: ['Critical', 'High', 'Medium', 'Low'], default: 'Medium' },
-      duplicateScore: { type: Number, default: 0 },
-      duplicateOf: { type: String, default: null },
-      recommendedDisciplines: [String],
-      recommendedUniversities: [
-        {
-          universityId: String,
-          name: String,
-          matchScore: Number,
-          reason: String
-        }
-      ],
-      tags: [String],
-      summary: { type: String, default: '' },
-      analyzedAt: { type: Date, default: Date.now }
-    },
     status: {
       type: String,
       enum: [
         'submitted',
-        'ai_triage',
         'govt_review',
         'allocated',
         'proposal_submitted',
@@ -168,6 +150,12 @@ const problemSchema = new mongoose.Schema(
         }
       }
     ],
+    proposalGivenUniversity: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'University'
+      }
+    ],
     industryPartners: [
       {
         partnerId: { type: String, required: true },
@@ -204,18 +192,17 @@ const problemSchema = new mongoose.Schema(
       {
         timestamp: { type: Date, default: Date.now },
         officer: { type: String, default: 'System' },
-        role: { type: String, default: 'ai_engine' },
+        role: { type: String, default: 'citizen' },
         action: { type: String, required: true },
         note: { type: String, default: '' }
       }
     ],
     timeline: [
       {
-        timestamp: { type: Date, default: Date.now },
-        officer: { type: String, default: 'System' },
-        role: { type: String, default: 'ai_engine' },
-        action: { type: String, required: true },
-        note: { type: String, default: '' }
+        title: { type: String, required: true },
+        description: { type: String, required: true },
+        colour: { type: String, default: 'green' },
+        createdAt: { type: Date, default: Date.now }
       }
     ]
   },
@@ -225,9 +212,10 @@ const problemSchema = new mongoose.Schema(
 );
 
 // Search indexes for text and geospatial coordinates
-problemSchema.index({ title: 'text', description: 'text', 'aiAnalysis.tags': 'text' });
+problemSchema.index({ title: 'text', description: 'text' });
 problemSchema.index({ 'location.geoPoint': '2dsphere' });
 problemSchema.index({ 'location.lat': 1, 'location.lng': 1 });
+problemSchema.index({ 'location.district': 1, 'location.block': 1, 'location.panchayat': 1 });
 
 export const Problem = mongoose.model('Problem', problemSchema);
 export default Problem;

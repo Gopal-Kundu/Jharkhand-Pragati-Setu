@@ -87,6 +87,11 @@ export default function NotificationsModal({ isOpen, onClose, notifications = []
                       <h4 className="font-bold text-sm text-slate-900 font-heading">
                         {notif.title}
                       </h4>
+                      {notif.schemaName && (
+                        <span className="font-mono text-[10px] font-black px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 border border-emerald-200">
+                          {notif.schemaName}
+                        </span>
+                      )}
                       {notif.ticketId && (
                         <span className="font-mono text-[10px] font-black px-2 py-0.5 rounded bg-slate-200/80 text-slate-800">
                           #{notif.ticketId}
@@ -95,7 +100,7 @@ export default function NotificationsModal({ isOpen, onClose, notifications = []
                     </div>
 
                     <p className="text-xs text-slate-600 pl-4 leading-relaxed">
-                      {notif.message}
+                      {notif.description || notif.message}
                     </p>
 
                     <div className="text-[11px] text-slate-400 pl-4 pt-1 flex items-center space-x-1">

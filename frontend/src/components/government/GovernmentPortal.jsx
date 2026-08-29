@@ -38,18 +38,6 @@ const ALL_DOMAINS = [
   'Rural Livelihoods'
 ];
 
-const DOMAIN_IMAGES = {
-  'Water Resources': 'https://images.unsplash.com/photo-1541888946425-d0fbb18086f6?auto=format&fit=crop&w=800&q=80',
-  'Agriculture': 'https://images.unsplash.com/photo-1592982537447-7440770cbfc9?auto=format&fit=crop&w=800&q=80',
-  'Healthcare': 'https://images.unsplash.com/photo-1527613426441-4da17471b66d?auto=format&fit=crop&w=800&q=80',
-  'Environment': 'https://images.unsplash.com/photo-1508873696983-2df5293cb32f?auto=format&fit=crop&w=800&q=80',
-  'Energy': 'https://images.unsplash.com/photo-1509391365360-2e959784a276?auto=format&fit=crop&w=800&q=80',
-  'Urban Development': 'https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?auto=format&fit=crop&w=800&q=80',
-  'Education': 'https://images.unsplash.com/photo-1509062522246-3755977927d7?auto=format&fit=crop&w=800&q=80',
-  'Accessibility': 'https://images.unsplash.com/photo-1584515979956-d9f6e5d09982?auto=format&fit=crop&w=800&q=80',
-  'Public Administration': 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=800&q=80',
-  'Rural Livelihoods': 'https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?auto=format&fit=crop&w=800&q=80'
-};
 
 export default function GovernmentPortal() {
   const authState = useSelector((state) => state.auth);
@@ -355,7 +343,7 @@ export default function GovernmentPortal() {
               const offer = prop.industryOffer || {};
               const industry = offer.industry || {};
               const propDomain = prop.domain || problem.domain || 'Innovation';
-              const imageUrl = problem.evidence?.[0]?.url || DOMAIN_IMAGES[propDomain] || 'https://images.unsplash.com/photo-1541888946425-d0fbb18086f6?auto=format&fit=crop&w=800&q=80';
+              const imageUrl = problem.evidence?.[0]?.url || problem.evidenceUrl || '';
               const hasVideo = problem.evidence?.some(e => e.type === 'video' || e.url?.endsWith('.mp4') || e.url?.includes('/video/'));
 
               const propIsPending = isPending(prop);
@@ -420,24 +408,36 @@ export default function GovernmentPortal() {
                           </span>
                         </div>
 
-                        {/* Problem Image Thumbnail */}
-                        <div className="relative h-32 w-full rounded-xl overflow-hidden bg-slate-200">
-                          <img
-                            src={imageUrl}
-                            alt={problem.title}
-                            className="w-full h-full object-cover object-center"
-                          />
-                          <div className="absolute bottom-2 left-2 flex items-center space-x-1 text-[10px] font-bold text-white bg-black/60 backdrop-blur-md px-2 py-0.5 rounded-lg">
-                            <MapPin className="w-3 h-3 text-emerald-400" />
-                            <span>{problem.location?.district || 'Jharkhand'}</span>
-                          </div>
-                          {hasVideo && (
-                            <div className="absolute top-2 right-2 flex items-center space-x-1 text-[10px] font-bold text-white bg-indigo-600/90 backdrop-blur-md px-2 py-0.5 rounded-lg">
-                              <Play className="w-2.5 h-2.5 fill-current" />
-                              <span>Video</span>
+                        {/* Problem Image Thumbnail or Domain Banner */}
+                        {imageUrl ? (
+                          <div className="relative h-32 w-full rounded-xl overflow-hidden bg-slate-200">
+                            <img
+                              src={imageUrl}
+                              alt={problem.title}
+                              className="w-full h-full object-cover object-center"
+                            />
+                            <div className="absolute bottom-2 left-2 flex items-center space-x-1 text-[10px] font-bold text-white bg-black/60 backdrop-blur-md px-2 py-0.5 rounded-lg">
+                              <MapPin className="w-3 h-3 text-emerald-400" />
+                              <span>{problem.location?.district || 'Jharkhand'}</span>
                             </div>
-                          )}
-                        </div>
+                            {hasVideo && (
+                              <div className="absolute top-2 right-2 flex items-center space-x-1 text-[10px] font-bold text-white bg-indigo-600/90 backdrop-blur-md px-2 py-0.5 rounded-lg">
+                                <Play className="w-2.5 h-2.5 fill-current" />
+                                <span>Video</span>
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          <div className="relative h-20 w-full rounded-xl bg-gradient-to-r from-slate-900 to-emerald-950 p-3 flex items-center justify-between text-white">
+                            <div className="flex items-center space-x-1.5 text-xs font-bold text-emerald-300">
+                              <MapPin className="w-3.5 h-3.5 text-emerald-400" />
+                              <span>{problem.location?.district || 'Jharkhand'}</span>
+                            </div>
+                            <span className="text-[10px] font-bold bg-white/10 px-2 py-0.5 rounded text-slate-300">
+                              {propDomain}
+                            </span>
+                          </div>
+                        )}
 
                         <div>
                           <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">
@@ -499,6 +499,12 @@ export default function GovernmentPortal() {
                             <span>Estimated Budget:</span>
                             <strong className="text-emerald-700 font-mono">₹{(prop.estimatedBudget || 500000).toLocaleString()}</strong>
                           </div>
+                          {prop.peopleImpacted && Number(prop.peopleImpacted) > 0 && (
+                            <div className="flex items-center justify-between text-slate-600">
+                              <span>Target Impact:</span>
+                              <strong className="text-indigo-700 font-bold">👥 {Number(prop.peopleImpacted).toLocaleString()} Lives</strong>
+                            </div>
+                          )}
                         </div>
                       </div>
 

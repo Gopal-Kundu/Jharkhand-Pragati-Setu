@@ -14,6 +14,7 @@ import {
   approveTripartiteProposal,
   getTripartiteProposalsForGovt
 } from '../controllers/problemController.js';
+import { addTimelineEvent } from '../controllers/timelineController.js';
 import upload from '../middleware/uploadMiddleware.js';
 import { protect, authorizeRoles } from '../middleware/authMiddleware.js';
 
@@ -53,5 +54,8 @@ router.patch('/:id/milestones/:milestoneId', updateMilestone);
 
 // Government Final Validation & Impact Certification
 router.patch('/:id/validate', validateSolution);
+
+// Append Timeline Milestone Event
+router.post('/:problemId/timeline', protect, addTimelineEvent);
 
 export default router;

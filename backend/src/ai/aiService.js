@@ -3,7 +3,7 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-const CANONICAL_DOMAINS = [
+export const CANONICAL_DOMAINS = [
   'Education',
   'Agriculture',
   'Healthcare',
@@ -13,7 +13,8 @@ const CANONICAL_DOMAINS = [
   'Urban Development',
   'Accessibility',
   'Public Administration',
-  'Rural Livelihoods'
+  'Rural Livelihoods',
+  'Others'
 ];
 
 const apiKey = process.env.AI_API_KEY || process.env.GEMINI_API_KEY || '';
@@ -29,7 +30,7 @@ if (apiKey) {
 }
 
 /**
- * Helper to get generative model with fallback candidates
+ * Helper to get generative model
  */
 const getGenerativeModel = () => {
   if (!genAI) return null;
@@ -45,15 +46,15 @@ const getGenerativeModel = () => {
 };
 
 /**
- * Intelligent Fallback Domain Classifier based on keywords
+ * Deterministic Fallback Domain Classifier based on keywords
  */
-const fallbackClassify = (title = '', description = '') => {
+export const fallbackClassify = (title = '', description = '') => {
   const text = `${title} ${description}`.toLowerCase();
 
-  if (/water|fluoride|arsenic|jal|handpump|drinking|irrigation|well|dam|river|pond|tank|drought/i.test(text)) {
+  if (/water|fluoride|arsenic|jal|handpump|drinking|irrigation|well|dam|river|pond|tank|drought|borewell/i.test(text)) {
     return 'Water Resources';
   }
-  if (/crop|soil|farmer|agriculture|kisan|seed|pesticide|fertilizer|harvest|irrigation|yield/i.test(text)) {
+  if (/crop|soil|farmer|agriculture|kisan|seed|pesticide|fertilizer|harvest|yield|cold storage/i.test(text)) {
     return 'Agriculture';
   }
   if (/health|doctor|hospital|medicine|disease|malaria|clinic|maternal|patient|phc|sanitation|vaccine/i.test(text)) {
@@ -77,16 +78,19 @@ const fallbackClassify = (title = '', description = '') => {
   if (/panchayat|ration|scheme|pension|corruption|govt|block office|certificate|brib|aadhaar/i.test(text)) {
     return 'Public Administration';
   }
-  return 'Rural Livelihoods';
+  if (/livelihood|tribal|artisan|handicraft|silk|tussar|mahua|shg|women group|forest produce|weaver/i.test(text)) {
+    return 'Rural Livelihoods';
+  }
+  return 'Others';
 };
 
 /**
- * Analyze problem statement, extract root cause, severity, and classify canonical domain using AI
+ * AI Domain Assignment: Assigns exactly one canonical domain to the problem statement
  * 
  * @param {string} title - Problem title
- * @param {string} description - Detailed problem narrative
+ * @param {string} description - Problem narrative
  * @param {Object} location - Geographical location details
- * @returns {Promise<Object>} AI analysis & classified domain
+ * @returns {Promise<{ domain: string }>}
  */
 export const analyzeAndClassifyProblem = async (title, description, location = {}) => {
   const defaultFallbackDomain = fallbackClassify(title, description);
@@ -94,87 +98,57 @@ export const analyzeAndClassifyProblem = async (title, description, location = {
   try {
     const model = getGenerativeModel();
     if (!model) {
-      return buildFallbackAnalysis(title, description, location, defaultFallbackDomain);
+      return { domain: defaultFallbackDomain };
     }
 
     const prompt = `
-You are the Lead AI Scientist for Jharkhand State Innovation & Societal Problem Triage Engine.
-Analyze the following grassroots societal problem submitted by a citizen / Gram Panchayat in Jharkhand:
+You are the AI Domain Classification Engine for the Jharkhand State Societal Problem Registry.
+Analyze the following grassroots societal problem statement:
 
 Location: District: ${location.district || 'Ranchi'}, Block: ${location.block || 'Sadar'}, Panchayat/Village: ${location.panchayat || ''}
 Title: "${title}"
 Description: "${description}"
 
-TASKS:
-1. Classify the problem into EXACTLY ONE of the following canonical domains:
+TASK:
+Classify this problem into EXACTLY ONE of the following canonical domains:
 ${CANONICAL_DOMAINS.map(d => `- "${d}"`).join('\n')}
 
-2. Estimate Severity Score (1.0 to 10.0 numeric).
-3. Determine Urgency Level ("Low", "Medium", "High", or "Critical").
-4. Determine Confidence Score (0.70 to 0.99).
-5. Recommend 2-4 academic engineering/scientific disciplines needed to develop a deployable solution (e.g. ["Hydrogeology", "IoT & Embedded Sensors", "Environmental Engineering"]).
-6. Provide a concise executive summary (1-2 sentences).
-7. Identify 3-5 keywords/tags.
-8. State the primary root cause.
-
-Return ONLY a valid, parseable JSON object with NO markdown ticks or other text, formatted exactly like:
+Return ONLY a valid, parseable JSON object with NO markdown ticks or other text:
 {
-  "domain": "Water Resources",
-  "category": "Groundwater Contamination Remediation",
-  "severity": 8.5,
-  "urgency": "High",
-  "confidence": 0.95,
-  "recommendedDisciplines": ["Environmental Engineering", "Chemical Sensing", "IoT Systems"],
-  "summary": "High concentration of toxic contaminants impacting potable water supply in village handpumps.",
-  "rootCause": "Geogenic leaching into deep aquifers combined with absence of real-time filtration.",
-  "tags": ["water", "filtration", "Jharkhand"]
+  "domain": "One of the canonical domains from the list above"
 }
 `;
 
     const result = await model.generateContent(prompt);
     const textResponse = result.response.text().trim();
-
-    // Clean JSON response
     const cleanedText = textResponse.replace(/^```json\s*/i, '').replace(/\s*```$/i, '').trim();
     const parsed = JSON.parse(cleanedText);
 
-    // Validate domain against CANONICAL_DOMAINS
     const matchedDomain = CANONICAL_DOMAINS.find(
       d => d.toLowerCase() === (parsed.domain || '').toLowerCase()
     ) || defaultFallbackDomain;
 
-    return {
-      domain: matchedDomain,
-      category: parsed.category || `${matchedDomain} Intervention`,
-      severity: Number(parsed.severity) || 7.5,
-      urgency: ['Low', 'Medium', 'High', 'Critical'].includes(parsed.urgency) ? parsed.urgency : 'High',
-      confidence: Number(parsed.confidence) || 0.93,
-      recommendedDisciplines: Array.isArray(parsed.recommendedDisciplines) && parsed.recommendedDisciplines.length > 0 
-        ? parsed.recommendedDisciplines 
-        : ['Multidisciplinary Engineering', 'Applied Sciences'],
-      summary: parsed.summary || description.slice(0, 160),
-      rootCause: parsed.rootCause || 'Root cause identified through field parameters and citizen narrative.',
-      tags: Array.isArray(parsed.tags) ? parsed.tags : [matchedDomain, location.district || 'Jharkhand', 'SIH-2026']
-    };
+    return { domain: matchedDomain };
   } catch (err) {
     console.warn('[AI Classification Fallback]:', err.message);
-    return buildFallbackAnalysis(title, description, location, defaultFallbackDomain);
+    return { domain: defaultFallbackDomain };
   }
 };
 
 /**
- * Check if the new problem is a duplicate of any existing problem in that location
+ * AI Deduplication Check by Location: Evaluates whether a new problem statement is a duplicate
+ * of an existing problem registered in that specific locality (district, block, panchayat).
  * 
  * @param {Object} newProblem - { title, description, location }
- * @param {Array<Object>} existingProblemsInLocation - List of existing problems in same district/panchayat
- * @returns {Promise<Object>} { isDuplicate: boolean, matchedTicketId: string, explanation: string }
+ * @param {Array<Object>} existingProblemsInLocation - List of existing problems in same locality
+ * @returns {Promise<{ isDuplicate: boolean, matchedTicketId: string, explanation: string }>}
  */
 export const checkProblemDuplicateInLocation = async (newProblem, existingProblemsInLocation = []) => {
   if (!existingProblemsInLocation || existingProblemsInLocation.length === 0) {
-    return { isDuplicate: false };
+    return { isDuplicate: false, matchedTicketId: '', explanation: 'No existing problems in this locality' };
   }
 
-  // Quick title exact match check
+  // Exact title match check
   const exactMatch = existingProblemsInLocation.find(
     p => p.title?.trim().toLowerCase() === newProblem.title?.trim().toLowerCase()
   );
@@ -182,7 +156,7 @@ export const checkProblemDuplicateInLocation = async (newProblem, existingProble
     return {
       isDuplicate: true,
       matchedTicketId: exactMatch.ticketId,
-      explanation: `Exact matching problem title already registered under #${exactMatch.ticketId}`
+      explanation: `Exact matching problem title already registered in this locality under #${exactMatch.ticketId}`
     };
   }
 
@@ -197,24 +171,25 @@ export const checkProblemDuplicateInLocation = async (newProblem, existingProble
     ).join('\n');
 
     const prompt = `
-You are the AI Deduplication Engine for the State of Jharkhand Grassroots Problem Registry.
-A citizen is submitting a new problem statement from:
-Location: District: ${newProblem.location?.district || ''}, Block: ${newProblem.location?.block || ''}, Panchayat: ${newProblem.location?.panchayat || ''}
+You are the AI Deduplication Engine for the Problem Registry.
+A citizen is submitting a problem from:
+Locality: District: ${newProblem.location?.district || ''}, Block: ${newProblem.location?.block || ''}, Panchayat: ${newProblem.location?.panchayat || ''}
 New Title: "${newProblem.title}"
 New Description: "${newProblem.description}"
 
-Here are the existing problems already reported in this locality:
+Existing problems registered in this same locality:
 ${existingProblemsListFormatted}
 
-Evaluate whether the new problem is reporting the EXACT SAME underlying ground issue / grievance that is already registered.
-If it is a genuinely different problem (e.g. one is about drinking water and another is about school electricity, or different handpump locations), it is NOT a duplicate.
-If it is the same problem statement reported again, it IS a duplicate.
+TASK:
+Determine if the new problem is reporting the EXACT SAME underlying ground issue/grievance that is already registered in this locality.
+If it is a different issue, isDuplicate is false.
+If it is reporting the same issue, isDuplicate is true.
 
 Return ONLY a valid JSON object with NO markdown ticks:
 {
   "isDuplicate": true or false,
-  "matchedTicketId": "Ticket ID of the matched problem if duplicate, otherwise empty string",
-  "reason": "Short 1-sentence reason"
+  "matchedTicketId": "Ticket ID of matched problem if duplicate, otherwise empty string",
+  "reason": "Short 1-sentence explanation"
 }
 `;
 
@@ -253,43 +228,16 @@ const fallbackDuplicateCheck = (newProblem, existingProblems) => {
       return {
         isDuplicate: true,
         matchedTicketId: existing.ticketId || existing._id,
-        explanation: `Substantially similar problem statement already active under #${existing.ticketId}`
+        explanation: `Substantially similar problem statement already active in this locality under #${existing.ticketId}`
       };
     }
   }
 
-  return { isDuplicate: false };
+  return { isDuplicate: false, matchedTicketId: '', explanation: 'No duplicate found in this locality' };
 };
 
 /**
- * Helper to build safe fallback analysis object
- */
-const buildFallbackAnalysis = (title, description, location, domain) => {
-  return {
-    domain,
-    category: `${domain} Intervention`,
-    severity: 7.8,
-    urgency: 'High',
-    confidence: 0.91,
-    recommendedDisciplines: [
-      domain === 'Water Resources' ? 'Hydrogeology & Water Quality' :
-      domain === 'Agriculture' ? 'Agronomy & Smart Irrigation' :
-      domain === 'Healthcare' ? 'Community Medicine & Diagnostics' :
-      domain === 'Energy' ? 'Renewable Energy & Power Microgrids' :
-      domain === 'Environment' ? 'Environmental Engineering' : 'Applied Engineering'
-    ],
-    summary: description.slice(0, 160) || title,
-    rootCause: `Root problem in ${location.district || 'Jharkhand'} requiring technological and engineering intervention.`,
-    tags: [domain, location.district || 'Jharkhand', 'SIH-2026']
-  };
-};
-
-/**
- * Match a University R&D Proposal to the most suitable Corporate CSR / Industry Partner
- * 
- * @param {Object} proposal - { title, description, problemStatement, industrySupportRequired, estimatedBudget }
- * @param {Array<Object>} industryList - List of available industry partners in database
- * @returns {Promise<Object>} Matching details
+ * Match Proposal to Industry Partner based on domain
  */
 export const matchProposalToIndustry = async (proposal, industryList = []) => {
   if (!industryList || industryList.length === 0) {
@@ -301,77 +249,11 @@ export const matchProposalToIndustry = async (proposal, industryList = []) => {
     };
   }
 
-  try {
-    const model = getGenerativeModel();
-    if (!model) {
-      return fallbackIndustryMatch(proposal, industryList);
-    }
-
-    const industrySummaries = industryList.map(ind => 
-      `Partner ID: ${ind.partnerId || ind._id} | Name: "${ind.name}" | Type: ${ind.type} | Focus Domains: [${(ind.focusDomains || ind.availableDomains || []).join(', ')}]`
-    ).join('\n');
-
-    const prompt = `
-You are the AI Matchmaking Engine for University R&D Proposals and Corporate CSR/Industry Sponsors in Jharkhand.
-A University has created an innovation & deployment proposal:
-
-Proposal Title: "${proposal.title}"
-Problem Statement: "${proposal.problemStatement}"
-Technical Methodology / Description: "${proposal.description}"
-Required Industry Support: [${(proposal.industrySupportRequired || []).join(', ')}]
-Estimated Budget: ₹${proposal.estimatedBudget || 500000}
-
-Here are the registered Industry Partners / CSR Foundations:
-${industrySummaries}
-
-TASK:
-Select the SINGLE BEST matching industry partner whose CSR mandate, engineering facilities, and focus areas align with this proposal.
-
-Return ONLY a valid JSON object with NO markdown ticks:
-{
-  "matchedPartnerId": "Partner ID of chosen industry partner",
-  "matchedRationale": "Concise 1-2 sentence explanation of why this industry partner is the optimal match",
-  "confidence": 0.94,
-  "suggestedFundingRange": "₹7,50,000 - ₹12,00,000"
-}
-`;
-
-    const result = await model.generateContent(prompt);
-    const textResponse = result.response.text().trim();
-    const cleanedText = textResponse.replace(/^```json\s*/i, '').replace(/\s*```$/i, '').trim();
-    const parsed = JSON.parse(cleanedText);
-
-    const foundPartner = industryList.find(
-      ind => (ind.partnerId && ind.partnerId === parsed.matchedPartnerId) || (ind._id && ind._id.toString() === parsed.matchedPartnerId)
-    ) || industryList[0];
-
-    return {
-      matchedPartnerId: foundPartner?._id,
-      matchedPartnerObj: foundPartner,
-      matchedRationale: parsed.matchedRationale || `Matched based on CSR focus in ${foundPartner?.availableDomains?.[0] || foundPartner?.focusDomains?.[0] || 'Grassroots Innovation'} and required support capabilities.`,
-      confidence: Number(parsed.confidence) || 0.93,
-      suggestedFundingRange: parsed.suggestedFundingRange || '₹5,00,000 - ₹15,00,000'
-    };
-  } catch (err) {
-    console.warn('[AI Industry Match Fallback]:', err.message);
-    return fallbackIndustryMatch(proposal, industryList);
-  }
-};
-
-/**
- * Fallback industry matching based on domain keywords
- */
-const fallbackIndustryMatch = (proposal, industryList) => {
-  const text = `${proposal.title} ${proposal.description} ${(proposal.industrySupportRequired || []).join(' ')}`.toLowerCase();
-  
+  const propText = `${proposal.title || ''} ${proposal.description || ''} ${(proposal.industrySupportRequired || []).join(' ')}`.toLowerCase();
   let chosen = industryList[0];
   for (const ind of industryList) {
-    const indText = `${ind.name} ${(ind.availableDomains || ind.focusDomains || []).join(' ')}`.toLowerCase();
-    if (/water|sluice|fabrication|metal|iot/i.test(text) && /steel|tata|jusco/i.test(indText)) {
-      chosen = ind;
-      break;
-    }
-    if (/mine|fire|air|subsidence|energy|coal/i.test(text) && /coal|ccl|mining/i.test(indText)) {
+    const indText = `${ind.name || ''} ${(ind.availableDomains || ind.focusDomains || []).join(' ')}`.toLowerCase();
+    if (proposal.domain && indText.includes(proposal.domain.toLowerCase())) {
       chosen = ind;
       break;
     }
@@ -380,9 +262,9 @@ const fallbackIndustryMatch = (proposal, industryList) => {
   return {
     matchedPartnerId: chosen?._id,
     matchedPartnerObj: chosen,
-    matchedRationale: `Matched with ${chosen?.name || 'CSR Partner'} based on aligned industrial capabilities and CSR mandate.`,
-    confidence: 0.90,
-    suggestedFundingRange: '₹5,00,000 - ₹12,00,000'
+    matchedRationale: `Matched with ${chosen?.name || 'CSR Partner'} based on aligned capabilities and CSR mandate.`,
+    confidence: 0.92,
+    suggestedFundingRange: '₹5,00,000 - ₹15,00,000'
   };
 };
 
@@ -390,5 +272,6 @@ export default {
   CANONICAL_DOMAINS,
   analyzeAndClassifyProblem,
   checkProblemDuplicateInLocation,
+  fallbackClassify,
   matchProposalToIndustry
 };

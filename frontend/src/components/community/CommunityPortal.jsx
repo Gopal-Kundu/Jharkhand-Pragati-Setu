@@ -97,18 +97,6 @@ const DOMAIN_ICONS = {
   'Rural Livelihoods': Footprints
 };
 
-const DOMAIN_IMAGES = {
-  'Water Resources': 'https://images.unsplash.com/photo-1541888946425-d0fbb18086f6?auto=format&fit=crop&w=800&q=80',
-  'Agriculture': 'https://images.unsplash.com/photo-1592982537447-7440770cbfc9?auto=format&fit=crop&w=800&q=80',
-  'Healthcare': 'https://images.unsplash.com/photo-1527613426441-4da17471b66d?auto=format&fit=crop&w=800&q=80',
-  'Environment': 'https://images.unsplash.com/photo-1508873696983-2df5293cb32f?auto=format&fit=crop&w=800&q=80',
-  'Energy': 'https://images.unsplash.com/photo-1509391365360-2e959784a276?auto=format&fit=crop&w=800&q=80',
-  'Urban Development': 'https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?auto=format&fit=crop&w=800&q=80',
-  'Education': 'https://images.unsplash.com/photo-1509062522246-3755977927d7?auto=format&fit=crop&w=800&q=80',
-  'Accessibility': 'https://images.unsplash.com/photo-1584515979956-d9f6e5d09982?auto=format&fit=crop&w=800&q=80',
-  'Public Administration': 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=800&q=80',
-  'Rural Livelihoods': 'https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?auto=format&fit=crop&w=800&q=80'
-};
 
 export default function CommunityPortal() {
   const authState = useSelector((state) => state.auth);
@@ -280,6 +268,11 @@ export default function CommunityPortal() {
       }
 
       const res = await problemApi.submitProblem(submissionData);
+      if (res && (res.success === false || res.duplicate)) {
+        toast.error(res.message || 'Someone from your locality has already submitted this problem.');
+        return;
+      }
+
       const newProblem = res.problem || res;
       const newTicketId = newProblem.ticketId || 'JH-SOC-1042';
       const decidedDomain = newProblem.domain || 'Innovation Intervention';
@@ -311,11 +304,8 @@ export default function CommunityPortal() {
       setIsFormOpen(false);
     } catch (err) {
       console.error('Submission error:', err);
-      if (err.response?.status === 409 || err.response?.data?.duplicate) {
-        toast.error(err.response.data.message || 'This problem has already been reported by someone in this locality/panchayat.');
-      } else {
-        toast.error(err.response?.data?.message || 'Failed to submit problem statement');
-      }
+      const apiMessage = err.response?.data?.message || err.data?.message || err.message || 'Someone from your locality has already submitted this problem.';
+      toast.error(apiMessage);
     } finally {
       setSubmitting(false);
     }
@@ -689,7 +679,7 @@ export default function CommunityPortal() {
               const isSolved = p.resolutionStatus === 'solved' || p.status === 'validated';
               const isInProgress = p.status === 'in_progress' || p.status === 'allocated' || p.status === 'funded';
               const Icon = DOMAIN_ICONS[p.domain] || Droplets;
-              const imageUrl = p.evidence?.[0]?.url || DOMAIN_IMAGES[p.domain] || 'https://images.unsplash.com/photo-1541888946425-d0fbb18086f6?auto=format&fit=crop&w=800&q=80';
+              const imageUrl = p.evidence?.[0]?.url || p.evidenceUrl || '';
 
               return (
                 <div
@@ -697,41 +687,63 @@ export default function CommunityPortal() {
                   onClick={() => setSelectedProblemId(ticket)}
                   className="bg-white border border-slate-200 rounded-3xl overflow-hidden shadow-sm hover:border-emerald-500/60 hover:shadow-xl transition-all cursor-pointer flex flex-col justify-between group hover:-translate-y-1"
                 >
-                  {/* Evidence Photo Banner */}
-                  <div className="relative h-48 w-full overflow-hidden bg-slate-100">
-                    <img
-                      src={imageUrl}
-                      alt={p.title}
-                      className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-500"
-                      loading="lazy"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/20" />
+                  {/* Evidence Photo Banner or Domain Header */}
+                  {imageUrl ? (
+                    <div className="relative h-48 w-full overflow-hidden bg-slate-100">
+                      <img
+                        src={imageUrl}
+                        alt={p.title}
+                        className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-500"
+                        loading="lazy"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/20" />
 
-                    <div className="absolute top-3 right-3 flex items-center space-x-1.5">
-                      {p.evidence?.some(e => e.type === 'video' || e.url?.endsWith('.mp4') || e.url?.includes('/video/')) && (
-                        <span className="flex items-center space-x-1 text-[11px] font-bold text-white bg-indigo-600/90 backdrop-blur-md px-2 py-1 rounded-xl border border-white/20">
-                          <Play className="w-3 h-3 fill-current text-white" />
-                          <span>Video</span>
+                      <div className="absolute top-3 right-3 flex items-center space-x-1.5">
+                        {p.evidence?.some(e => e.type === 'video' || e.url?.endsWith('.mp4') || e.url?.includes('/video/')) && (
+                          <span className="flex items-center space-x-1 text-[11px] font-bold text-white bg-indigo-600/90 backdrop-blur-md px-2 py-1 rounded-xl border border-white/20">
+                            <Play className="w-3 h-3 fill-current text-white" />
+                            <span>Video</span>
+                          </span>
+                        )}
+                        <span className="flex items-center space-x-1 text-xs font-bold text-white bg-black/60 backdrop-blur-md px-2.5 py-1 rounded-xl border border-white/20">
+                          <Icon className="w-3.5 h-3.5 text-emerald-400" />
+                          <span>{p.domain}</span>
                         </span>
-                      )}
-                      <span className="flex items-center space-x-1 text-xs font-bold text-white bg-black/60 backdrop-blur-md px-2.5 py-1 rounded-xl border border-white/20">
-                        <Icon className="w-3.5 h-3.5 text-emerald-400" />
-                        <span>{p.domain}</span>
-                      </span>
-                    </div>
+                      </div>
 
-                    {/* Location Overlay Badge */}
-                    <div className="absolute bottom-3 left-3 flex items-center">
-                      <span className="flex items-center space-x-1.5 px-2.5 py-1 rounded-xl bg-black/60 backdrop-blur-md text-white text-xs font-medium border border-white/20">
+                      {/* Location Overlay Badge */}
+                      <div className="absolute bottom-3 left-3 flex items-center">
+                        <span className="flex items-center space-x-1.5 px-2.5 py-1 rounded-xl bg-black/60 backdrop-blur-md text-white text-xs font-medium border border-white/20">
+                          <MapPin className="w-3.5 h-3.5 text-emerald-400" />
+                          <span>
+                            {p.location?.panchayat ? `${p.location.panchayat}, ` : ''}
+                            {p.location?.block ? `${p.location.block}, ` : ''}
+                            {p.location?.district || 'Jharkhand'}
+                          </span>
+                        </span>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="relative h-32 w-full bg-gradient-to-br from-slate-800 via-slate-900 to-emerald-950 p-4 flex flex-col justify-between">
+                      <div className="flex items-center justify-between">
+                        <span className="flex items-center space-x-1.5 text-xs font-bold text-emerald-300 bg-white/10 backdrop-blur-md px-2.5 py-1 rounded-xl border border-white/10">
+                          <Icon className="w-3.5 h-3.5 text-emerald-400" />
+                          <span>{p.domain}</span>
+                        </span>
+                        <span className="text-[10px] font-bold text-slate-300 bg-black/40 px-2 py-0.5 rounded-lg">
+                          #{ticket}
+                        </span>
+                      </div>
+                      <div className="flex items-center space-x-1.5 text-slate-300 text-xs font-medium">
                         <MapPin className="w-3.5 h-3.5 text-emerald-400" />
                         <span>
                           {p.location?.panchayat ? `${p.location.panchayat}, ` : ''}
                           {p.location?.block ? `${p.location.block}, ` : ''}
                           {p.location?.district || 'Jharkhand'}
                         </span>
-                      </span>
+                      </div>
                     </div>
-                  </div>
+                  )}
 
                   {/* Card Content Body */}
                   <div className="p-6 flex-1 flex flex-col justify-between space-y-4">

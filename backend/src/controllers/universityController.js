@@ -2,6 +2,7 @@ import University from '../models/University.js';
 import User from '../models/User.js';
 import Proposal from '../models/Proposal.js';
 import Problem from '../models/Problem.js';
+import { pushProblemTimeline } from './timelineController.js';
 import IndustryPartner from '../models/IndustryPartner.js';
 import { matchProposalToIndustry } from '../ai/aiService.js';
 import { MASTER_HEI_CATALOG } from '../data/masterCatalog.js';
@@ -292,14 +293,15 @@ export const getUniversityNotifications = async (req, res) => {
 export const markUniversityNotificationsRead = async (req, res) => {
   try {
     const univId = req.user.university;
-    if (!univId) {
-      return res.status(200).json({ success: true, message: 'No university linked' });
+    const univ = await University.findById(univId);
+    if (univ && Array.isArray(univ.notifications) && univ.notifications.length > 0) {
+      univ.notifications.forEach(n => {
+        n.read = true;
+        if (!n.description && n.message) n.description = n.message;
+        if (!n.schemaName) n.schemaName = 'Problem';
+      });
+      await univ.save({ validateModifiedOnly: true });
     }
-
-    await University.updateOne(
-      { _id: univId },
-      { $set: { 'notifications.$[].read': true } }
-    );
 
     return res.status(200).json({
       success: true,
@@ -330,7 +332,8 @@ export const createProposal = async (req, res) => {
       teamMembers = [],
       projectDuration = '6 Months',
       estimatedBudget = 500000,
-      industrySupportRequired = []
+      industrySupportRequired = [],
+      peopleImpacted = 0
     } = req.body;
 
     if (!problemId || !title || !description) {
@@ -385,6 +388,7 @@ export const createProposal = async (req, res) => {
       teamMembers: Array.isArray(teamMembers) ? teamMembers : [],
       projectDuration,
       estimatedBudget: Number(estimatedBudget) || 500000,
+      peopleImpacted: Number(peopleImpacted) || 0,
       industrySupportRequired: Array.isArray(industrySupportRequired) && industrySupportRequired.length > 0
         ? industrySupportRequired
         : ['IoT & Embedded Sensors'],
@@ -439,15 +443,65 @@ export const createProposal = async (req, res) => {
       $inc: { activeProjects: 1 }
     });
 
-    // 5. Update Problem status & allocation
-    await Problem.findByIdAndUpdate(problem._id, {
+    // 5. Update Problem status, allocation, peopleImpacted & push universityId to proposalGivenUniversity
+    const problemUpdate = {
       status: 'in_progress',
-      allocatedUniversity: universityId
+      allocatedUniversity: universityId,
+      $addToSet: {
+        proposalGivenUniversity: universityId
+      }
+    };
+
+    if (peopleImpacted && Number(peopleImpacted) > 0) {
+      problemUpdate['impactMetrics.metricValue'] = Number(peopleImpacted).toLocaleString();
+      problemUpdate['impactMetrics.metricName'] = 'Lives Impacted';
+    }
+
+    await Problem.findByIdAndUpdate(problem._id, problemUpdate);
+
+    // 6. Append to Problem Timeline with University name & date
+    const universityDoc = await University.findById(universityId);
+    const universityName = universityDoc?.name || req.user?.organization || 'University R&D Lab';
+    const dateFormatted = new Date().toLocaleDateString('en-IN', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric'
     });
+
+    await pushProblemTimeline(
+      problem._id,
+      `${universityName} submitted R&D Proposal`,
+      `${universityName} submitted an R&D implementation proposal ('${title}') on ${dateFormatted}.`,
+      'indigo'
+    );
+
+    // 7. Send notification to the user/citizen who reported this problem
+    const submitterUserId = problem.user || (problem.submitter?.email ? (await User.findOne({ email: problem.submitter.email }))?._id : null);
+    if (submitterUserId) {
+      try {
+        await User.findByIdAndUpdate(submitterUserId, {
+          $push: {
+            notifications: {
+              $each: [{
+                id: newProposal._id,
+                schemaName: 'Proposal',
+                title: `Proposal Submitted for #${problem.ticketId}`,
+                description: `${universityName} submitted an R&D proposal for your reported challenge '${problem.title}'.`,
+                read: false,
+                createdAt: new Date()
+              }],
+              $position: 0
+            }
+          }
+        });
+      } catch (userNotifErr) {
+        console.warn('[Problem Submitter Notification Error]:', userNotifErr.message);
+      }
+    }
 
     return res.status(201).json({
       success: true,
-      message: 'Proposal successfully created and matched with Industry Partner by AI!',
+      message: 'Proposal sent to required industries',
       proposal: newProposal
     });
   } catch (error) {
@@ -515,16 +569,12 @@ export const respondToIndustryOffer = async (req, res) => {
 
       // Append to Problem Timeline
       if (proposal.problem) {
-        await Problem.findByIdAndUpdate(proposal.problem._id, {
-          $push: {
-            timeline: {
-              officer: university.name,
-              role: 'university',
-              action: 'Industry CSR Offer Accepted by University',
-              note: `${university.name} accepted CSR grant (₹${(proposal.industryOffer?.fundingAmount || 0).toLocaleString()}) and equipment support from ${proposal.industryOffer?.industry?.name || 'Industry Sponsor'}. Forwarded to Government.`
-            }
-          }
-        });
+        await pushProblemTimeline(
+          proposal.problem._id || proposal.problem,
+          'Industry CSR Offer Accepted by University',
+          `${university.name} accepted CSR grant (₹${(proposal.industryOffer?.fundingAmount || 0).toLocaleString()}) and equipment support from ${proposal.industryOffer?.industry?.name || 'Industry Sponsor'}. Forwarded to Government.`,
+          'indigo'
+        );
       }
 
       return res.status(200).json({

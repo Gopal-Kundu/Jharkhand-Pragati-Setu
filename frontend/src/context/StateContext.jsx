@@ -116,30 +116,29 @@ export function StateProvider({ children }) {
         location: {
           district: formData.districtName || formData.district || 'Ranchi',
           block: formData.block || 'Sadar',
+          panchayat: formData.panchayat || '',
           state: 'Jharkhand'
         },
         submitterRole: formData.submitterType || 'citizen'
       });
 
       const aiResult = aiResponse.data || {};
-      const strongDuplicate = aiResult.duplicateCheck?.isDuplicate && aiResult.duplicateCheck.similarityScore > 0.85
-        ? aiResult.duplicateCheck
-        : null;
-
-      if (strongDuplicate) {
-        toast.warning(`Merged with existing cluster #${strongDuplicate.matchedTicketId} (${Math.round(strongDuplicate.similarityScore * 100)}% Match)`);
-        logAction(formData.name || 'Citizen Submitter', 'AI Deduplication Merge', strongDuplicate.matchedTicketId, `Linked report into existing problem.`);
-        addNotification(`New citizen report merged into cluster #${strongDuplicate.matchedTicketId}`, 'government');
-        return { success: true, clusterId: strongDuplicate.matchedTicketId, isMerged: true };
+      if (aiResult.duplicateCheck?.isDuplicate) {
+        toast.error('Someone from your locality has already submitted this problem.');
+        return {
+          success: false,
+          duplicate: true,
+          message: 'Someone from your locality has already submitted this problem.'
+        };
       }
 
       const payload = {
         title: formData.title || `${aiResult.domain || 'Societal'} Challenge in ${formData.districtName || 'Jharkhand'}`,
         description: formData.narrative || formData.description || '',
-        domain: aiResult.domain || 'Water Resources',
+        domain: aiResult.domain || 'Others',
         location: {
           district: formData.districtName || formData.district || 'Ranchi',
-          block: formData.block || 'Sadar',
+          block: formData.block || '',
           panchayat: formData.panchayat || '',
           state: 'Jharkhand',
           lat: formData.gps?.lat || 23.3441,
@@ -147,33 +146,55 @@ export function StateProvider({ children }) {
         },
         submitter: {
           name: formData.name || 'Concerned Citizen',
-          role: formData.submitterType === 'Panchayat Representative' ? 'pri_panchayat' : 'individual_citizen',
+          role: formData.submitterType === 'Panchayati Raj Institution' ? 'pri_panchayat' : 'individual_citizen',
           email: formData.email || '',
           phone: formData.phone || ''
         },
-        aiAnalysis: aiResult,
-        priority: aiResult.urgency || 'High',
-        evidenceUrl: (formData.mediaFiles && formData.mediaFiles[0]?.url) || 'https://images.unsplash.com/photo-1541888946425-d0fbb18086f6?auto=format&fit=crop&w=1200&q=80'
+        priority: formData.urgency || 'Medium',
+        evidenceUrl: (formData.mediaFiles && formData.mediaFiles[0]?.url) || ''
       };
 
       const submitAction = await dispatch(submitProblemThunk(payload));
+      if (submitProblemThunk.rejected.match(submitAction)) {
+        const errPayload = submitAction.payload;
+        const apiMessage = typeof errPayload === 'object' 
+          ? errPayload.message 
+          : typeof errPayload === 'string' 
+          ? errPayload 
+          : 'Someone from your locality has already submitted this problem.';
+
+        toast.error(apiMessage || 'Someone from your locality has already submitted this problem.');
+        return { 
+          success: false, 
+          duplicate: Boolean(errPayload?.duplicate), 
+          message: apiMessage,
+          existingTicketId: errPayload?.existingTicketId 
+        };
+      }
+
       const createdProblem = submitAction.payload;
       const ticketId = createdProblem?.ticketId || `JH-${Date.now().toString().slice(-4)}`;
 
       toast.success(`Problem Statement Registered!`);
-      logAction('AI Engine', 'AI Auto-Triage & Routing', ticketId, `Categorized as ${payload.domain}`);
-      addNotification(`New Challenge #${ticketId} registered and triaged`, 'government');
+      logAction('AI Engine', 'AI Domain Classified', ticketId, `Categorized as ${payload.domain}`);
+      addNotification(`New Challenge #${ticketId} registered (${payload.domain})`, 'government');
       setSelectedClusterId(ticketId);
 
       return {
         success: true,
         clusterId: ticketId,
         isMerged: false,
-        aiAnalysis: aiResult
+        domain: payload.domain
       };
     } catch (error) {
-      toast.error('Registered locally in offline mode');
-      return { success: true, clusterId: 'JH-LOC-1001' };
+      const apiMsg = error.response?.data?.message || error.message || 'Someone from your locality has already submitted this problem.';
+      toast.error(apiMsg);
+      return { 
+        success: false, 
+        duplicate: Boolean(error?.response?.data?.duplicate), 
+        message: apiMsg,
+        existingTicketId: error?.response?.data?.existingTicketId 
+      };
     }
   };
 

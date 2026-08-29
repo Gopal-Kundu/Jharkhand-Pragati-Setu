@@ -66,13 +66,9 @@ const userSchema = new mongoose.Schema(
     notifications: [
       {
         title: { type: String, required: true },
-        message: { type: String, required: true },
-        ticketId: { type: String, default: '' },
-        type: {
-          type: String,
-          enum: ['status_update', 'allocation', 'funding', 'resolution', 'general'],
-          default: 'status_update'
-        },
+        description: { type: String, default: '' },
+        id: { type: mongoose.Schema.Types.ObjectId, default: () => new mongoose.Types.ObjectId() },
+        schemaName: { type: String, default: 'Problem' },
         read: { type: Boolean, default: false },
         createdAt: { type: Date, default: Date.now }
       }

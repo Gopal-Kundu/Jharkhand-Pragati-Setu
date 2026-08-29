@@ -56,6 +56,10 @@ const proposalSchema = new mongoose.Schema(
       type: Number,
       default: 500000
     },
+    peopleImpacted: {
+      type: Number,
+      default: 0
+    },
     industrySupportRequired: [
       {
         type: String,

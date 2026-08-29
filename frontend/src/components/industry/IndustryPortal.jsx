@@ -45,18 +45,6 @@ const ALL_DOMAINS = [
   'Rural Livelihoods'
 ];
 
-const DOMAIN_IMAGES = {
-  'Water Resources': 'https://images.unsplash.com/photo-1541888946425-d0fbb18086f6?auto=format&fit=crop&w=800&q=80',
-  'Agriculture': 'https://images.unsplash.com/photo-1592982537447-7440770cbfc9?auto=format&fit=crop&w=800&q=80',
-  'Healthcare': 'https://images.unsplash.com/photo-1527613426441-4da17471b66d?auto=format&fit=crop&w=800&q=80',
-  'Environment': 'https://images.unsplash.com/photo-1508873696983-2df5293cb32f?auto=format&fit=crop&w=800&q=80',
-  'Energy': 'https://images.unsplash.com/photo-1509391365360-2e959784a276?auto=format&fit=crop&w=800&q=80',
-  'Urban Development': 'https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?auto=format&fit=crop&w=800&q=80',
-  'Education': 'https://images.unsplash.com/photo-1509062522246-3755977927d7?auto=format&fit=crop&w=800&q=80',
-  'Accessibility': 'https://images.unsplash.com/photo-1584515979956-d9f6e5d09982?auto=format&fit=crop&w=800&q=80',
-  'Public Administration': 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=800&q=80',
-  'Rural Livelihoods': 'https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?auto=format&fit=crop&w=800&q=80'
-};
 
 const INDUSTRY_SUPPORT_OPTIONS = [
   'IoT & Embedded Sensors',
@@ -103,33 +91,36 @@ export default function IndustryPortal() {
   const [industryForm, setIndustryForm] = useState({
     name: '',
     type: 'CSR Foundation',
-    hqLocation: 'Ranchi, Jharkhand',
-    availableDomains: ['Water Resources', 'Agriculture', 'Environment'],
-    supportCapabilities: ['IoT & Embedded Sensors', 'Rapid Prototyping & Metal 3D Printing'],
-    csrAnnualBudgetInr: 5000000,
+    hqLocation: '',
+    availableDomains: [],
+    supportCapabilities: [],
+    csrAnnualBudgetInr: '',
     contactEmail: authUser?.email || '',
-    mentorName: authUser?.name || 'Corporate Technical Lead',
-    mentorDesignation: 'Director of CSR & Technology'
+    mentorName: authUser?.name || '',
+    mentorDesignation: ''
   });
 
   // CSR Offer Form State
   const [offerForm, setOfferForm] = useState({
-    fundingAmount: 500000,
+    fundingAmount: '',
     supportDetails: '',
-    equipmentProvided: ['IoT & Embedded Sensors'],
-    mentorName: authUser?.name || 'Corporate Technical Mentor',
-    mentorDesignation: 'Senior Principal Engineer',
+    equipmentProvided: [],
+    mentorName: authUser?.name || '',
+    mentorDesignation: '',
     mentorEmail: authUser?.email || ''
   });
 
   // Load Industry Profile & Domain Proposals
-  const loadIndustryData = async () => {
+  const loadIndustryData = async (showLoading = false) => {
     if (!isAuthenticated) {
       setLoadingProfile(false);
       return;
     }
     try {
-      setLoadingProfile(true);
+      if (showLoading) {
+        setLoadingProfile(true);
+        setLoadingProposals(true);
+      }
       const res = await industryApi.getMyIndustry();
       if (res.industry) {
         setMyIndustry(res.industry);
@@ -146,7 +137,6 @@ export default function IndustryPortal() {
         });
 
         // Load proposals
-        setLoadingProposals(true);
         const propRes = await industryApi.getDomainProposals();
         if (propRes.proposals) {
           setProposals(propRes.proposals);
@@ -157,13 +147,15 @@ export default function IndustryPortal() {
     } catch (err) {
       console.warn('[Load Industry Error]:', err.message);
     } finally {
-      setLoadingProfile(false);
-      setLoadingProposals(false);
+      if (showLoading) {
+        setLoadingProfile(false);
+        setLoadingProposals(false);
+      }
     }
   };
 
   useEffect(() => {
-    loadIndustryData();
+    loadIndustryData(true);
   }, [isAuthenticated, authUser]);
 
   // Handle Industry Registration
@@ -297,7 +289,47 @@ export default function IndustryPortal() {
       const res = await industryApi.makeProposalOffer(selectedProposalForOffer._id, payload);
       setIsOfferModalOpen(false);
       toast.success(res.message || 'CSR funding offer submitted to university team!');
-      loadIndustryData();
+
+      // Optimistic update of local state without refresh
+      const offerProposalId = selectedProposalForOffer._id;
+      setMyIndustry(prev => {
+        if (!prev) return prev;
+        const currentSended = Array.isArray(prev.sendedProposal) ? prev.sendedProposal : [];
+        const currentAccepted = Array.isArray(prev.acceptedProposals) ? prev.acceptedProposals : [];
+        return {
+          ...prev,
+          sendedProposal: [...currentSended, offerProposalId],
+          acceptedProposals: [...currentAccepted, offerProposalId],
+          activeGrantsCount: (prev.activeGrantsCount || 0) + 1
+        };
+      });
+
+      setProposals(prev =>
+        prev.map(p => {
+          if (p._id === offerProposalId) {
+            return {
+              ...p,
+              status: 'offered_by_industry',
+              assignedIndustry: myIndustry?._id,
+              industryOffer: {
+                industry: myIndustry,
+                fundingAmount: payload.fundingAmount,
+                supportDetails: payload.supportDetails,
+                equipmentProvided: payload.equipmentProvided,
+                mentorName: payload.mentorName,
+                mentorDesignation: payload.mentorDesignation,
+                mentorEmail: payload.mentorEmail,
+                offeredAt: new Date(),
+                responseStatus: 'pending'
+              }
+            };
+          }
+          return p;
+        })
+      );
+
+      // Background silent sync
+      loadIndustryData(false);
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to submit CSR offer');
     } finally {
@@ -413,6 +445,7 @@ export default function IndustryPortal() {
                 <label className="block font-bold text-slate-700 mb-1">HQ / Operating Location</label>
                 <input
                   type="text"
+                  placeholder="e.g. Ranchi, Jharkhand"
                   value={industryForm.hqLocation}
                   onChange={(e) => setIndustryForm({ ...industryForm, hqLocation: e.target.value })}
                   className="w-full p-2.5 border border-slate-200 text-slate-900 bg-slate-50 font-medium rounded-xl focus:outline-none"
@@ -423,6 +456,7 @@ export default function IndustryPortal() {
                 <label className="block font-bold text-slate-700 mb-1">Annual Committed CSR Pool (₹)</label>
                 <input
                   type="number"
+                  placeholder="e.g. 5000000"
                   value={industryForm.csrAnnualBudgetInr}
                   onChange={(e) => setIndustryForm({ ...industryForm, csrAnnualBudgetInr: e.target.value })}
                   className="w-full p-2.5 border border-slate-200 text-slate-900 bg-slate-50 font-medium rounded-xl focus:outline-none"
@@ -492,6 +526,7 @@ export default function IndustryPortal() {
                 <label className="block font-bold text-slate-700 mb-1">Lead Representative / Mentor Name</label>
                 <input
                   type="text"
+                  placeholder="e.g. Corporate Technical Lead"
                   value={industryForm.mentorName}
                   onChange={(e) => setIndustryForm({ ...industryForm, mentorName: e.target.value })}
                   className="w-full p-2.5 border border-slate-200 text-slate-900 bg-slate-50 font-medium rounded-xl focus:outline-none"
@@ -502,6 +537,7 @@ export default function IndustryPortal() {
                 <label className="block font-bold text-slate-700 mb-1">Official Contact Email</label>
                 <input
                   type="email"
+                  placeholder="e.g. csr.lead@company.com"
                   value={industryForm.contactEmail}
                   onChange={(e) => setIndustryForm({ ...industryForm, contactEmail: e.target.value })}
                   className="w-full p-2.5 border border-slate-200 text-slate-900 bg-slate-50 font-medium rounded-xl focus:outline-none"
@@ -532,6 +568,20 @@ export default function IndustryPortal() {
     return propDomain && registeredDomains.some(d => d.toLowerCase() === propDomain.toLowerCase());
   });
 
+  const currentIndId = (myIndustry?._id || '').toString();
+  const sendedList = Array.isArray(myIndustry?.sendedProposal) ? myIndustry.sendedProposal : [];
+  const acceptedList = Array.isArray(myIndustry?.acceptedProposals) ? myIndustry.acceptedProposals : [];
+
+  const acceptedOffers = proposals.filter((p) => {
+    const offer = p.industryOffer;
+    const isMine =
+      Boolean(currentIndId && offer && ((offer.industry?._id || offer.industry)?.toString() === currentIndId)) ||
+      sendedList.some(item => ((item?._id || item)?.toString() === (p._id || '').toString())) ||
+      acceptedList.some(item => ((item?._id || item)?.toString() === (p._id || '').toString()));
+
+    return isMine;
+  });
+
   const filteredAllProposals = proposals.filter(p => {
     const propDomain = p.domain || p.problem?.domain;
     const matchesDomain = selectedDomainFilter === 'all' || (propDomain && propDomain.toLowerCase() === selectedDomainFilter.toLowerCase());
@@ -547,6 +597,8 @@ export default function IndustryPortal() {
 
   const displayedProposals = activeTab === 'recommended'
     ? (selectedDomainFilter === 'all' ? recommendedProposals : recommendedProposals.filter(p => (p.domain || p.problem?.domain) === selectedDomainFilter))
+    : activeTab === 'accepted'
+    ? (selectedDomainFilter === 'all' ? acceptedOffers : acceptedOffers.filter(p => (p.domain || p.problem?.domain) === selectedDomainFilter))
     : filteredAllProposals;
 
   return (
@@ -579,9 +631,9 @@ export default function IndustryPortal() {
         </div>
       </div>
 
-      {/* 2 Section Tabs: Recommended Proposals & All Proposals */}
+      {/* 3 Section Tabs: Recommended Proposals, All Proposals & Accepted Offers & Govt Sanctions */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 pb-2">
-        <div className="flex items-center space-x-2">
+        <div className="flex flex-wrap items-center gap-2">
           <button
             onClick={() => setActiveTab('recommended')}
             className={`flex items-center space-x-2 py-2.5 px-5 text-xs font-bold rounded-xl transition-all cursor-pointer ${
@@ -604,6 +656,18 @@ export default function IndustryPortal() {
           >
             <Compass className="w-4 h-4" />
             <span>All Proposals ({proposals.length})</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('accepted')}
+            className={`flex items-center space-x-2 py-2.5 px-5 text-xs font-bold rounded-xl transition-all cursor-pointer ${
+              activeTab === 'accepted'
+                ? 'bg-purple-700 text-white shadow-md shadow-purple-700/20'
+                : 'bg-purple-50 text-purple-800 border border-purple-200 hover:bg-purple-100'
+            }`}
+          >
+            <CheckCircle2 className="w-4 h-4 text-purple-600" />
+            <span>Accepted Offers &amp; Govt Sanctions ({acceptedOffers.length})</span>
           </button>
         </div>
 
@@ -671,7 +735,11 @@ export default function IndustryPortal() {
       <div className="space-y-4 animate-in fade-in">
         <div className="flex items-center justify-between pt-2 pb-1">
           <h2 className="text-xl sm:text-2xl font-black text-slate-900 font-heading">
-            {activeTab === 'recommended' ? 'Recommended Proposals' : 'All University Proposals'} ({displayedProposals.length})
+            {activeTab === 'recommended'
+              ? 'Recommended Proposals'
+              : activeTab === 'accepted'
+              ? 'Accepted Offers & Live Govt Sanctions'
+              : 'All University Proposals'} ({displayedProposals.length})
           </h2>
         </div>
 
@@ -683,9 +751,13 @@ export default function IndustryPortal() {
         ) : displayedProposals.length === 0 ? (
           <div className="bg-white rounded-3xl p-10 text-center border border-slate-200 space-y-2 shadow-sm">
             <CheckCircle2 className="w-12 h-12 text-emerald-600 mx-auto" />
-            <h3 className="font-bold text-base text-slate-900 font-heading">No Proposals Found</h3>
+            <h3 className="font-bold text-base text-slate-900 font-heading">
+              {activeTab === 'accepted' ? 'No Accepted Offers or Sanctions Found' : 'No Proposals Found'}
+            </h3>
             <p className="text-xs text-slate-500 max-w-md mx-auto">
-              {activeTab === 'recommended'
+              {activeTab === 'accepted'
+                ? 'When your company submits CSR grants and equipment offers for university proposals, they will be listed here alongside real-time Government statutory sanction approvals.'
+                : activeTab === 'recommended'
                 ? `No proposals matching your registered domains (${registeredDomains.join(', ')}). Switch to "All Proposals" tab to browse state-wide research initiatives.`
                 : 'No university research proposals found matching your filter criteria.'}
             </p>
@@ -696,50 +768,95 @@ export default function IndustryPortal() {
               const problem = prop.problem || {};
               const university = prop.university || {};
               const propDomain = prop.domain || problem.domain || 'Innovation';
-              const imageUrl = problem.evidence?.[0]?.url || DOMAIN_IMAGES[propDomain] || 'https://images.unsplash.com/photo-1541888946425-d0fbb18086f6?auto=format&fit=crop&w=800&q=80';
+              const imageUrl = problem.evidence?.[0]?.url || problem.evidenceUrl || '';
               const hasVideo = problem.evidence?.some(e => e.type === 'video' || e.url?.endsWith('.mp4') || e.url?.includes('/video/'));
               
               const offer = prop.industryOffer;
-              const hasOfferedByMe = offer && (offer.industry?._id === myIndustry._id || offer.industry === myIndustry._id);
+              const sendedList = Array.isArray(myIndustry?.sendedProposal) ? myIndustry.sendedProposal : [];
+              const acceptedList = Array.isArray(myIndustry?.acceptedProposals) ? myIndustry.acceptedProposals : [];
+              const currentIndId = (myIndustry?._id || '').toString();
+
+              const hasOfferedByMe = 
+                Boolean(currentIndId && offer && ((offer.industry?._id || offer.industry)?.toString() === currentIndId)) ||
+                sendedList.some(p => ((p?._id || p)?.toString() === (prop._id || '').toString())) ||
+                acceptedList.some(p => ((p?._id || p)?.toString() === (prop._id || '').toString()));
+
+              const isSanctioned = prop.status === 'approved_by_govt' || prop.govtApproval?.status === 'approved';
 
               return (
                 <div
                   key={prop._id || idx}
-                  className="bg-white border border-slate-200 rounded-3xl overflow-hidden shadow-sm hover:border-emerald-500/60 hover:shadow-xl transition-all flex flex-col justify-between group hover:-translate-y-1"
+                  className={`bg-white border rounded-3xl overflow-hidden shadow-sm transition-all flex flex-col justify-between group hover:-translate-y-1 ${
+                    isSanctioned 
+                      ? 'border-emerald-300 shadow-md ring-1 ring-emerald-500/20' 
+                      : hasOfferedByMe 
+                      ? 'border-purple-200 hover:border-purple-400' 
+                      : 'border-slate-200 hover:border-emerald-500/60 hover:shadow-xl'
+                  }`}
                 >
                   {/* Target Problem Banner */}
-                  <div className="relative h-44 w-full overflow-hidden bg-slate-100">
-                    <img
-                      src={imageUrl}
-                      alt={prop.title}
-                      className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-500"
-                      loading="lazy"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
+                  {imageUrl ? (
+                    <div className="relative h-44 w-full overflow-hidden bg-slate-100">
+                      <img
+                        src={imageUrl}
+                        alt={prop.title}
+                        className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-500"
+                        loading="lazy"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
 
-                    <div className="absolute top-3 right-3 flex items-center space-x-1.5">
-                      {hasVideo && (
-                        <span className="flex items-center space-x-1 text-[11px] font-bold text-white bg-indigo-600/90 backdrop-blur-md px-2 py-1 rounded-xl border border-white/20">
-                          <Play className="w-3 h-3 fill-current text-white" />
-                          <span>Video</span>
+                      <div className="absolute top-3 right-3 flex items-center space-x-1.5">
+                        {hasOfferedByMe && (
+                          <span className="flex items-center space-x-1 text-[11px] font-bold text-purple-900 bg-purple-100/90 backdrop-blur-md px-2.5 py-1 rounded-xl border border-purple-300 shadow-sm">
+                            <CheckCircle2 className="w-3.5 h-3.5 text-purple-700" />
+                            <span>Offer Made</span>
+                          </span>
+                        )}
+                        {hasVideo && (
+                          <span className="flex items-center space-x-1 text-[11px] font-bold text-white bg-indigo-600/90 backdrop-blur-md px-2 py-1 rounded-xl border border-white/20">
+                            <Play className="w-3 h-3 fill-current text-white" />
+                            <span>Video</span>
+                          </span>
+                        )}
+                        <span className="text-xs font-bold text-white bg-black/60 backdrop-blur-md px-2.5 py-1 rounded-xl border border-white/20">
+                          {propDomain}
                         </span>
-                      )}
-                      <span className="text-xs font-bold text-white bg-black/60 backdrop-blur-md px-2.5 py-1 rounded-xl border border-white/20">
-                        {propDomain}
-                      </span>
-                    </div>
+                      </div>
 
-                    <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between text-white text-xs">
-                      <span className="flex items-center space-x-1 font-medium bg-black/60 backdrop-blur-md px-2.5 py-1 rounded-xl border border-white/20">
+                      <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between text-white text-xs">
+                        <span className="flex items-center space-x-1 font-medium bg-black/60 backdrop-blur-md px-2.5 py-1 rounded-xl border border-white/20">
+                          <MapPin className="w-3.5 h-3.5 text-emerald-400" />
+                          <span>{problem.location?.district || 'Jharkhand'}</span>
+                        </span>
+                        <span className="font-bold text-emerald-300 bg-emerald-950/80 backdrop-blur-md px-2.5 py-1 rounded-xl border border-emerald-500/30">
+                          CSR Grant: ₹{(offer?.fundingAmount || prop.estimatedBudget || 0).toLocaleString()}
+                        </span>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="relative h-32 w-full bg-gradient-to-br from-slate-900 via-slate-800 to-indigo-950 p-4 flex flex-col justify-between">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-1.5">
+                          <span className="text-xs font-bold text-indigo-300 bg-white/10 backdrop-blur-md px-2.5 py-1 rounded-xl border border-white/10">
+                            {propDomain}
+                          </span>
+                          {hasOfferedByMe && (
+                            <span className="flex items-center space-x-1 text-[11px] font-bold text-purple-900 bg-purple-100/90 backdrop-blur-md px-2.5 py-0.5 rounded-lg border border-purple-300 shadow-sm">
+                              <CheckCircle2 className="w-3.5 h-3.5 text-purple-700" />
+                              <span>Offer Made</span>
+                            </span>
+                          )}
+                        </div>
+                        <span className="font-bold text-emerald-300 bg-emerald-950/80 backdrop-blur-md px-2.5 py-1 rounded-xl text-xs border border-emerald-500/30">
+                          CSR Grant: ₹{(offer?.fundingAmount || prop.estimatedBudget || 0).toLocaleString()}
+                        </span>
+                      </div>
+                      <div className="flex items-center space-x-1 text-slate-300 text-xs font-medium">
                         <MapPin className="w-3.5 h-3.5 text-emerald-400" />
                         <span>{problem.location?.district || 'Jharkhand'}</span>
-                      </span>
-
-                      <span className="bg-emerald-950/80 backdrop-blur-md text-emerald-300 px-2.5 py-1 rounded-xl font-bold border border-emerald-500/30">
-                        Est. ₹{(prop.estimatedBudget || 500000).toLocaleString()}
-                      </span>
+                      </div>
                     </div>
-                  </div>
+                  )}
 
                   {/* Proposal & University Body */}
                   <div className="p-6 flex-1 flex flex-col justify-between space-y-4">
@@ -766,36 +883,58 @@ export default function IndustryPortal() {
                         </p>
                       </div>
 
-                      
-
-                      
+                      {/* Live Government Sanction Status (for offered proposals) */}
+                      {hasOfferedByMe && (
+                        <div className={`p-3.5 rounded-2xl border text-xs space-y-1 ${
+                          isSanctioned
+                            ? 'bg-emerald-50 border-emerald-200 text-emerald-950'
+                            : 'bg-amber-50 border-amber-200 text-amber-950'
+                        }`}>
+                          <div className="flex items-center justify-between font-bold">
+                            <span className="flex items-center space-x-1.5">
+                              <ShieldCheck className={`w-4 h-4 ${isSanctioned ? 'text-emerald-600' : 'text-amber-600'}`} />
+                              <span>{isSanctioned ? 'Approved & Sanctioned by Government' : 'Forwarded to Government (Under Sanction Review)'}</span>
+                            </span>
+                            {prop.govtApproval?.sanctionOrderNumber && (
+                              <span className="font-mono text-[10px] bg-white px-2 py-0.5 rounded border border-emerald-300 text-emerald-800 font-bold">
+                                {prop.govtApproval.sanctionOrderNumber}
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-[11px] text-slate-600 leading-relaxed">
+                            {isSanctioned
+                              ? (prop.govtApproval?.remarks || 'Statutory approval granted under Section 135 CSR mandate. R&D implementation active.')
+                              : 'Tripartite package forwarded to Government Directorate. Awaiting formal sanction order & gazette notification.'}
+                          </p>
+                        </div>
+                      )}
                     </div>
 
                     {/* Action Bar */}
                     <div className="pt-4 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2">
                       <button
                         onClick={() => setSelectedProblemIdForModal(problem._id || problem.ticketId)}
-                        className="text-xs font-bold text-slate-600 hover:text-emerald-700 flex items-center space-x-1 cursor-pointer transition-colors"
+                        className="bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold px-3.5 py-2 rounded-xl border border-slate-200 flex items-center space-x-1.5 cursor-pointer transition-all hover:scale-105 shadow-sm"
                       >
-                        <Eye className="w-3.5 h-3.5" />
-                        <span>Inspect Details</span>
+                        <Eye className="w-3.5 h-3.5 text-slate-600" />
+                        <span>Check Proposal</span>
                       </button>
 
-                      <div className="flex items-center space-x-2">
-                        <button
-                          onClick={() => handleOpenRejectModal(prop)}
-                          className="px-3 py-2 rounded-xl border border-slate-200 text-slate-600 hover:text-rose-700 hover:bg-rose-50 text-xs font-bold transition-all cursor-pointer"
-                        >
-                          Reject
-                        </button>
-
-                        <button
-                          onClick={() => handleOpenOfferModal(prop)}
-                          className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-4 py-2 rounded-xl shadow-md shadow-emerald-600/20 cursor-pointer flex items-center space-x-1.5 transition-all hover:scale-105"
-                        >
-                          <Briefcase className="w-3.5 h-3.5" />
-                          <span>{hasOfferedByMe ? 'Update CSR Offer' : 'Accept & Make Offer'}</span>
-                        </button>
+                      <div>
+                        {hasOfferedByMe ? (
+                          <div className="inline-flex items-center space-x-1.5 px-4 py-2 rounded-xl bg-purple-100 text-purple-900 text-xs font-bold border border-purple-300 shadow-sm">
+                            <CheckCircle2 className="w-4 h-4 text-purple-700" />
+                            <span>Offer Made</span>
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => handleOpenOfferModal(prop)}
+                            className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-4 py-2 rounded-xl shadow-md shadow-emerald-600/20 cursor-pointer flex items-center space-x-1.5 transition-all hover:scale-105"
+                          >
+                            <Briefcase className="w-3.5 h-3.5" />
+                            <span>Accept &amp; Make Offer</span>
+                          </button>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -836,6 +975,7 @@ export default function IndustryPortal() {
                   <input
                     type="number"
                     required
+                    placeholder="e.g. 500000"
                     value={offerForm.fundingAmount}
                     onChange={(e) => setOfferForm({ ...offerForm, fundingAmount: e.target.value })}
                     className="w-full p-2.5 border border-slate-200 text-slate-900 bg-slate-50 font-medium rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 focus:outline-none"
@@ -846,6 +986,7 @@ export default function IndustryPortal() {
                   <label className="block font-bold text-slate-700 mb-1">Lead Technical Mentor Name</label>
                   <input
                     type="text"
+                    placeholder="e.g. Corporate Technical Mentor"
                     value={offerForm.mentorName}
                     onChange={(e) => setOfferForm({ ...offerForm, mentorName: e.target.value })}
                     className="w-full p-2.5 border border-slate-200 text-slate-900 bg-slate-50 font-medium rounded-xl focus:outline-none"
@@ -897,6 +1038,7 @@ export default function IndustryPortal() {
                   <label className="block font-bold text-slate-700 mb-1">Mentor Designation</label>
                   <input
                     type="text"
+                    placeholder="e.g. Senior Principal Engineer"
                     value={offerForm.mentorDesignation}
                     onChange={(e) => setOfferForm({ ...offerForm, mentorDesignation: e.target.value })}
                     className="w-full p-2.5 border border-slate-200 text-slate-900 bg-slate-50 font-medium rounded-xl focus:outline-none"
@@ -907,6 +1049,7 @@ export default function IndustryPortal() {
                   <label className="block font-bold text-slate-700 mb-1">Mentor Official Email</label>
                   <input
                     type="email"
+                    placeholder="e.g. mentor@company.com"
                     value={offerForm.mentorEmail}
                     onChange={(e) => setOfferForm({ ...offerForm, mentorEmail: e.target.value })}
                     className="w-full p-2.5 border border-slate-200 text-slate-900 bg-slate-50 font-medium rounded-xl focus:outline-none"

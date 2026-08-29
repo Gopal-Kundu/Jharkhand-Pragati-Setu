@@ -12,7 +12,7 @@ import aiRoutes from './routes/aiRoutes.js';
 import analyticsRoutes from './routes/analyticsRoutes.js';
 import universityRoutes from './routes/universityRoutes.js';
 import industryRoutes from './routes/industryRoutes.js';
-import emailRoutes from './routes/emailRoutes.js';
+import notificationRoutes from './routes/notificationRoutes.js';
 
 // Load environment variables from .env
 dotenv.config();
@@ -98,7 +98,7 @@ app.use('/api/ai', aiRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/universities', universityRoutes);
 app.use('/api/industry', industryRoutes);
-app.use('/api/notifications', emailRoutes);
+app.use('/api/notifications', notificationRoutes);
 
 // 6. Global 404 Route Handler
 app.use((req, res) => {

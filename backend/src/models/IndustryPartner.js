@@ -48,6 +48,12 @@ const industryPartnerSchema = new mongoose.Schema(
         ref: 'Proposal'
       }
     ],
+    sendedProposal: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Proposal'
+      }
+    ],
     mentorshipAvailable: {
       type: Boolean,
       default: true
@@ -65,11 +71,10 @@ const industryPartnerSchema = new mongoose.Schema(
     },
     notifications: [
       {
-        proposalId: { type: mongoose.Schema.Types.ObjectId, ref: 'Proposal' },
-        problemId: { type: mongoose.Schema.Types.ObjectId, ref: 'Problem' },
         title: { type: String, required: true },
-        message: { type: String, required: true },
-        domain: { type: String, default: '' },
+        description: { type: String, default: '' },
+        id: { type: mongoose.Schema.Types.ObjectId, default: () => new mongoose.Types.ObjectId() },
+        schemaName: { type: String, default: 'Proposal' },
         read: { type: Boolean, default: false },
         createdAt: { type: Date, default: Date.now }
       }

@@ -129,7 +129,6 @@ export default function AuthPage() {
               >
                 <option value="citizen">Concerned Citizen / Resident</option>
                 <option value="panchayat">Gram Panchayat (PRI) / ULB Representative</option>
-                <option value="government">Government Department Officer</option>
                 <option value="university">University Faculty Lead / Student Innovator</option>
                 <option value="industry">Industry CSR / Enterprise / Startup</option>
               </select>

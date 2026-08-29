@@ -93,7 +93,7 @@ export const sendProblemSubmittedEmail = async (problemData, recipientEmail) => 
           <p style="margin: 4px 0;"><strong>Ticket ID:</strong> ${problemData.ticketId || problemData._id}</p>
           <p style="margin: 4px 0;"><strong>Domain:</strong> ${problemData.domain}</p>
           <p style="margin: 4px 0;"><strong>Location:</strong> ${problemData.location?.district || 'Jharkhand'}, Block: ${problemData.location?.block || 'N/A'}</p>
-          <p style="margin: 4px 0;"><strong>AI Severity Score:</strong> ${problemData.aiAnalysis?.severity || '7.5'}/10</p>
+          <p style="margin: 4px 0;"><strong>Priority:</strong> ${problemData.priority || 'Medium'}</p>
         </div>
         <p>Our AI system has categorized this problem statement and forwarded it to the relevant Government Department and University Innovation Centers for multidisciplinary solution prototyping.</p>
         <p style="color: #64748b; font-size: 13px;">You can track real-time milestones on the portal using your Ticket ID.</p>
@@ -124,7 +124,7 @@ export const sendUniversityAllocationEmail = async (problemData, universityEmail
           <h3 style="margin: 0 0 8px 0; color: #0f172a;">${problemData.title}</h3>
           <p style="margin: 4px 0;"><strong>Domain:</strong> ${problemData.domain}</p>
           <p style="margin: 4px 0;"><strong>Target District:</strong> ${problemData.location?.district}</p>
-          <p style="margin: 4px 0;"><strong>Recommended Disciplines:</strong> ${problemData.aiAnalysis?.recommendedDisciplines?.join(', ') || 'Interdisciplinary'}</p>
+          <p style="margin: 4px 0;"><strong>Priority:</strong> ${problemData.priority || 'Medium'}</p>
         </div>
         <p>Please log in to your <strong>University Portal</strong> to:</p>
         <ol>

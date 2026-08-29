@@ -2,6 +2,7 @@ import IndustryPartner from '../models/IndustryPartner.js';
 import User from '../models/User.js';
 import Proposal from '../models/Proposal.js';
 import Problem from '../models/Problem.js';
+import { pushProblemTimeline } from './timelineController.js';
 import University from '../models/University.js';
 import { MASTER_INDUSTRY_CATALOG } from '../data/masterCatalog.js';
 
@@ -295,16 +296,12 @@ export const makeProposalOffer = async (req, res) => {
 
       // Log to problem timeline
       if (proposal.problem) {
-        await Problem.findByIdAndUpdate(proposal.problem._id, {
-          $push: {
-            timeline: {
-              officer: industry.name,
-              role: 'industry',
-              action: 'Proposal Co-Sponsorship Declined',
-              note: `${industry.name} evaluated research proposal '${proposal.title}' and declined support.`
-            }
-          }
-        });
+        await pushProblemTimeline(
+          proposal.problem._id || proposal.problem,
+          'Proposal Co-Sponsorship Declined',
+          `${industry.name} evaluated research proposal '${proposal.title}' and declined support. Reason: ${rejectionReason || 'Declined by industry sponsor'}`,
+          'amber'
+        );
       }
 
       return res.status(200).json({
@@ -336,23 +333,26 @@ export const makeProposalOffer = async (req, res) => {
 
     // Link proposal to Industry
     await IndustryPartner.findByIdAndUpdate(industry._id, {
-      $addToSet: { acceptedProposals: proposal._id },
+      $addToSet: { 
+        acceptedProposals: proposal._id,
+        sendedProposal: proposal._id 
+      },
       $inc: { activeGrantsCount: 1 }
     });
 
-    // Notify University
+    // Notify University with proposal accepted notification
     if (proposal.university) {
+      const targetUnivId = proposal.university._id || proposal.university;
       const univNotification = {
-        proposalId: proposal._id,
-        problemId: proposal.problem?._id,
-        title: `CSR Co-Sponsorship Offer Received (${proposal.domain || 'Innovation'})`,
-        message: `${industry.name} submitted a CSR funding grant of ₹${Number(offerPayload.fundingAmount).toLocaleString()} with equipment support for '${proposal.title}'.`,
-        domain: proposal.domain || 'Innovation',
+        id: proposal._id,
+        schemaName: 'Proposal',
+        title: `Proposal Accepted by ${industry.name}`,
+        description: `${industry.name} accepted your proposal '${proposal.title}' and committed a funding grant of ₹${Number(offerPayload.fundingAmount).toLocaleString()}.`,
         read: false,
         createdAt: new Date()
       };
 
-      await University.findByIdAndUpdate(proposal.university._id, {
+      await University.findByIdAndUpdate(targetUnivId, {
         $push: {
           notifications: {
             $each: [univNotification],
@@ -362,18 +362,21 @@ export const makeProposalOffer = async (req, res) => {
       });
     }
 
-    // Append to Problem Timeline for Citizen visibility
+    // Append to Problem Timeline with Industry name & formatted date
     if (proposal.problem) {
-      await Problem.findByIdAndUpdate(proposal.problem._id, {
-        $push: {
-          timeline: {
-            officer: industry.name,
-            role: 'industry',
-            action: 'Industry CSR Grant & Equipment Offered',
-            note: `${industry.name} submitted a co-sponsorship offer of ₹${Number(offerPayload.fundingAmount).toLocaleString()} with equipment support.`
-          }
-        }
+      const problemTargetId = proposal.problem._id || proposal.problem;
+      const dateFormatted = new Date().toLocaleDateString('en-IN', {
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric'
       });
+
+      await pushProblemTimeline(
+        problemTargetId,
+        `${industry.name} accepted & sponsored Proposal`,
+        `${industry.name} accepted proposal '${proposal.title}' and committed a CSR grant of ₹${Number(offerPayload.fundingAmount).toLocaleString()} on ${dateFormatted}.`,
+        'purple'
+      );
     }
 
     return res.status(200).json({
@@ -437,10 +440,18 @@ export const markIndustryNotificationsRead = async (req, res) => {
       return res.status(401).json({ success: false, message: 'Authentication required' });
     }
 
-    await IndustryPartner.findOneAndUpdate(
-      { $or: [{ _id: req.user.industry }, { registeredBy: req.user._id }] },
-      { $set: { 'notifications.$[].read': true } }
-    );
+    const ind = await IndustryPartner.findOne({
+      $or: [{ _id: req.user.industry }, { registeredBy: req.user._id }]
+    });
+
+    if (ind && Array.isArray(ind.notifications) && ind.notifications.length > 0) {
+      ind.notifications.forEach(n => {
+        n.read = true;
+        if (!n.description && n.message) n.description = n.message;
+        if (!n.schemaName) n.schemaName = 'Proposal';
+      });
+      await ind.save({ validateModifiedOnly: true });
+    }
 
     return res.status(200).json({
       success: true,

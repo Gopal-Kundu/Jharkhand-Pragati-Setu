@@ -20,7 +20,11 @@ apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
     const customError = error.response?.data?.message || error.message || 'Network request failed';
-    return Promise.reject(new Error(customError));
+    const err = new Error(customError);
+    err.response = error.response;
+    err.status = error.response?.status;
+    err.data = error.response?.data;
+    return Promise.reject(err);
   }
 );
 

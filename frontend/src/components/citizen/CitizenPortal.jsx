@@ -74,7 +74,8 @@ const DOMAINS = [
   'Urban Development',
   'Accessibility',
   'Public Administration',
-  'Rural Livelihoods'
+  'Rural Livelihoods',
+  'Others'
 ];
 
 const DOMAIN_ICONS = {
@@ -87,7 +88,8 @@ const DOMAIN_ICONS = {
   'Urban Development': Building,
   'Accessibility': Eye,
   'Public Administration': FileCheck,
-  'Rural Livelihoods': Footprints
+  'Rural Livelihoods': Footprints,
+  'Others': Layers
 };
 
 export default function CitizenPortal() {
@@ -189,6 +191,10 @@ export default function CitizenPortal() {
       }
 
       const res = await problemApi.submitProblem(submissionData);
+      if (res && (res.success === false || res.duplicate)) {
+        toast.error(res.message || 'Someone from your locality has already submitted this problem.');
+        return;
+      }
       
       const newProblem = res.problem || res;
       setSubmittedTicket(newProblem.ticketId || 'JH-WTR-1042');
@@ -215,8 +221,9 @@ export default function CitizenPortal() {
       setIsFormOpen(false);
       loadProblems();
     } catch (err) {
-      console.error('Submission error:', err);
-      toast.error(err.response?.data?.message || 'Failed to submit problem statement');
+      console.error('Error submitting problem statement:', err);
+      const apiMessage = err.response?.data?.message || err.data?.message || err.message || 'Someone from your locality has already submitted this problem.';
+      toast.error(apiMessage);
     } finally {
       setSubmitting(false);
     }

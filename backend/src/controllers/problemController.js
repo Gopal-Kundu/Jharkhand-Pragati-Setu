@@ -1,4 +1,5 @@
 import Problem from '../models/Problem.js';
+import { pushProblemTimeline } from './timelineController.js';
 import University from '../models/University.js';
 import User from '../models/User.js';
 import Location from '../models/Location.js';
@@ -87,7 +88,7 @@ export const createProblem = async (req, res) => {
         return res.status(409).json({
           success: false,
           duplicate: true,
-          message: `This problem has already been reported in this locality (${parsedLocation.panchayat || parsedLocation.block || parsedLocation.district}). Registered under #${duplicateResult.matchedTicketId || 'JH-WTR-1042'}.`,
+          message: 'Someone from your locality has already submitted this problem.',
           existingTicketId: duplicateResult.matchedTicketId
         });
       }
@@ -104,7 +105,7 @@ export const createProblem = async (req, res) => {
         const isVideo = file.mimetype.startsWith('video');
         const isAudio = file.mimetype.startsWith('audio');
         const isDoc = file.mimetype === 'application/pdf' || file.mimetype.includes('document');
-        
+
         const resourceType = isVideo ? 'video' : isDoc ? 'raw' : 'image';
         const fileType = isVideo ? 'video' : isAudio ? 'audio' : isDoc ? 'document' : 'photo';
 
@@ -155,20 +156,8 @@ export const createProblem = async (req, res) => {
       user: req.user ? req.user._id : undefined,
       submitter: parsedSubmitter,
       evidence: evidenceList,
-      aiAnalysis: {
-        domain: decidedDomain,
-        category: aiAnalysisResult.category,
-        severity: aiAnalysisResult.severity,
-        confidence: aiAnalysisResult.confidence,
-        urgency: aiAnalysisResult.urgency,
-        recommendedDisciplines: aiAnalysisResult.recommendedDisciplines,
-        recommendedUniversities: [],
-        tags: aiAnalysisResult.tags,
-        summary: aiAnalysisResult.summary,
-        rootCause: aiAnalysisResult.rootCause
-      },
       status: 'submitted',
-      priority: aiAnalysisResult.urgency || priority,
+      priority: priority || 'Medium',
       auditHistory: [
         {
           timestamp: new Date(),
@@ -202,26 +191,23 @@ export const createProblem = async (req, res) => {
 
     // 7. University Matching & Notification Dispatch based on availableDomains
     try {
-      const disciplineRegexes = (aiAnalysisResult.recommendedDisciplines || []).map(d => new RegExp(d, 'i'));
       const matchedUniversities = await University.find({
         $or: [
           { availableDomains: decidedDomain },
-          { academicDisciplines: { $in: disciplineRegexes } },
           { academicDisciplines: new RegExp(decidedDomain, 'i') },
           { researchCentres: new RegExp(decidedDomain, 'i') }
         ]
       });
 
-      const universitiesToNotify = matchedUniversities.length > 0 
-        ? matchedUniversities 
+      const universitiesToNotify = matchedUniversities.length > 0
+        ? matchedUniversities
         : await University.find().limit(3);
 
       const univNotification = {
-        problemId: newProblem._id,
-        ticketId: newProblem.ticketId,
+        id: newProblem._id,
+        schemaName: 'Problem',
         title: `New Challenge Statement Matched (${decidedDomain})`,
-        message: `A new societal problem from ${parsedLocation.district} ('${newProblem.title}') was matched to your university domain capabilities.`,
-        domain: decidedDomain,
+        description: `A new societal problem from ${parsedLocation.district} ('${newProblem.title}') was matched to your university domain capabilities.`,
         read: false,
         createdAt: new Date()
       };
@@ -247,10 +233,10 @@ export const createProblem = async (req, res) => {
           $push: {
             notifications: {
               $each: [{
+                id: newProblem._id,
+                schemaName: 'Problem',
                 title: `Challenge Logged: ${decidedDomain} (#${ticketId})`,
-                message: `Your challenge '${title}' was analyzed by AI and classified as '${decidedDomain}'. Sent for University R&D matching.`,
-                ticketId,
-                type: 'status_update',
+                description: `Your challenge '${title}' was analyzed by AI and classified as '${decidedDomain}'. Sent for University R&D matching.`,
                 read: false,
                 createdAt: new Date()
               }],
@@ -352,8 +338,7 @@ export const getProblems = async (req, res) => {
       filter.$or = [
         { title: new RegExp(search, 'i') },
         { description: new RegExp(search, 'i') },
-        { ticketId: new RegExp(search, 'i') },
-        { 'aiAnalysis.tags': new RegExp(search, 'i') }
+        { ticketId: new RegExp(search, 'i') }
       ];
     }
 
@@ -789,7 +774,7 @@ export const getMapLocations = async (req, res) => {
       ticketId: p.ticketId,
       title: p.title,
       domain: p.domain,
-      severity: p.priority || p.aiAnalysis?.urgency || 'High',
+      severity: p.priority || 'Medium',
       status: p.status,
       coordinates: {
         lat: p.location?.lat || 23.3441,
@@ -932,19 +917,24 @@ export const approveTripartiteProposal = async (req, res) => {
       }
 
       // Append to Problem Timeline and Audit History for Citizen visibility
-      if (!Array.isArray(problem.timeline)) problem.timeline = [];
       if (!Array.isArray(problem.auditHistory)) problem.auditHistory = [];
 
-      const sanctionEntry = {
+      const sanctionNote = `Government approved research implementation by ${proposal.university?.name || 'HEI'} with CSR co-sponsorship from ${proposal.industryOffer?.industry?.name || 'Industry Sponsor'} (Sanction: ${generatedSanction}).`;
+      
+      await pushProblemTimeline(
+        problem._id,
+        'Tripartite Partnership Sanctioned by Government',
+        sanctionNote,
+        'green'
+      );
+
+      problem.auditHistory.unshift({
         timestamp: new Date(),
         officer: req.user?.name || 'Govt Secretary / Triage Officer',
         role: 'government',
         action: 'Tripartite Partnership Sanctioned by Government',
-        note: `Government approved research implementation by ${proposal.university?.name || 'HEI'} with CSR co-sponsorship from ${proposal.industryOffer?.industry?.name || 'Industry Sponsor'} (Sanction: ${generatedSanction}).`
-      };
-
-      problem.timeline.push(sanctionEntry);
-      problem.auditHistory.unshift(sanctionEntry);
+        note: sanctionNote
+      });
 
       await problem.save();
 
@@ -955,11 +945,10 @@ export const approveTripartiteProposal = async (req, res) => {
           $push: {
             notifications: {
               $each: [{
-                proposalId: proposal._id,
-                problemId: problem._id,
+                id: proposal._id,
+                schemaName: 'Proposal',
                 title: `Project Sanction Approved by Government! (#${problem.ticketId})`,
-                message: `Government has approved and sanctioned the tripartite project with ${proposal.industryOffer?.industry?.name || 'Industry Sponsor'}. Implementation is now active.`,
-                domain: problem.domain,
+                description: `Government has approved and sanctioned the tripartite project with ${proposal.industryOffer?.industry?.name || 'Industry Sponsor'}. Implementation is now active.`,
                 read: false,
                 createdAt: new Date()
               }],
@@ -976,11 +965,10 @@ export const approveTripartiteProposal = async (req, res) => {
           $push: {
             notifications: {
               $each: [{
-                proposalId: proposal._id,
-                problemId: problem._id,
+                id: proposal._id,
+                schemaName: 'Proposal',
                 title: `Govt Sanction Order Issued for Co-Sponsorship (#${problem.ticketId})`,
-                message: `Tripartite project with ${proposal.university?.name || 'University'} has been sanctioned by Government under Section 135 CSR mandate.`,
-                domain: problem.domain,
+                description: `Tripartite project with ${proposal.university?.name || 'University'} has been sanctioned by Government under Section 135 CSR mandate.`,
                 read: false,
                 createdAt: new Date()
               }],
@@ -997,10 +985,10 @@ export const approveTripartiteProposal = async (req, res) => {
           $push: {
             notifications: {
               $each: [{
+                id: problem._id,
+                schemaName: 'Problem',
                 title: `Your Challenge is Now In Progress! (#${problem.ticketId})`,
-                message: `Your challenge '${problem.title}' has been matched with ${proposal.university?.name || 'University'} and co-sponsored by ${proposal.industryOffer?.industry?.name || 'Industry Partner'}.`,
-                ticketId: problem.ticketId,
-                type: 'status_update',
+                description: `Your challenge '${problem.title}' has been matched with ${proposal.university?.name || 'University'} and co-sponsored by ${proposal.industryOffer?.industry?.name || 'Industry Partner'}.`,
                 read: false,
                 createdAt: new Date()
               }],
@@ -1027,19 +1015,24 @@ export const approveTripartiteProposal = async (req, res) => {
       await proposal.save();
 
       // Append to Problem timeline and auditHistory
-      if (!Array.isArray(problem.timeline)) problem.timeline = [];
       if (!Array.isArray(problem.auditHistory)) problem.auditHistory = [];
 
-      const declineEntry = {
+      const declineNote = `Government review committee declined the proposal from ${proposal.university?.name || 'HEI'}. Remarks: ${remarks || 'Review committee decision'}`;
+
+      await pushProblemTimeline(
+        problem._id,
+        'Tripartite Proposal Declined by Government',
+        declineNote,
+        'rose'
+      );
+
+      problem.auditHistory.unshift({
         timestamp: new Date(),
         officer: req.user?.name || 'Govt Secretary / Review Committee',
         role: 'government',
         action: 'Tripartite Proposal Declined by Government',
-        note: `Government review committee declined the proposal from ${proposal.university?.name || 'HEI'}. Remarks: ${remarks || 'Review committee decision'}`
-      };
-
-      problem.timeline.push(declineEntry);
-      problem.auditHistory.unshift(declineEntry);
+        note: declineNote
+      });
 
       await problem.save();
 
@@ -1050,11 +1043,10 @@ export const approveTripartiteProposal = async (req, res) => {
           $push: {
             notifications: {
               $each: [{
-                proposalId: proposal._id,
-                problemId: problem._id,
+                id: proposal._id,
+                schemaName: 'Proposal',
                 title: `Proposal Review Decision: Declined (#${problem.ticketId})`,
-                message: `Government has declined the tripartite proposal for '${problem.title}'. Reason: ${remarks || 'Administrative review committee decision'}`,
-                domain: problem.domain,
+                description: `Government has declined the tripartite proposal for '${problem.title}'. Reason: ${remarks || 'Administrative review committee decision'}`,
                 read: false,
                 createdAt: new Date()
               }],
@@ -1071,11 +1063,10 @@ export const approveTripartiteProposal = async (req, res) => {
           $push: {
             notifications: {
               $each: [{
-                proposalId: proposal._id,
-                problemId: problem._id,
+                id: proposal._id,
+                schemaName: 'Proposal',
                 title: `Govt Sanction Update: Proposal Declined (#${problem.ticketId})`,
-                message: `Government has declined the tripartite project proposal for challenge #${problem.ticketId}. Reason: ${remarks || 'Administrative review committee decision'}`,
-                domain: problem.domain,
+                description: `Government has declined the tripartite project proposal for challenge #${problem.ticketId}. Reason: ${remarks || 'Administrative review committee decision'}`,
                 read: false,
                 createdAt: new Date()
               }],
