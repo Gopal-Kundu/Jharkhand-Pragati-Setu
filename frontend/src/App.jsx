@@ -4,7 +4,7 @@ import { useDispatch } from 'react-redux';
 import { StateProvider } from './context/StateContext';
 import { fetchSolvedChallenges } from './store/slices/ecosystemSlice';
 import { fetchCurrentUser } from './store/slices/authSlice';
-import ErrorBoundary from './components/common/ErrorBoundary';
+import ErrorBoundary, { ErrorFallback } from './components/common/ErrorBoundary';
 import LoadingScreen from './components/common/LoadingScreen';
 import MainLayout from './components/layout/MainLayout';
 import LandingPage from './pages/LandingPage';
@@ -46,33 +46,22 @@ function AppRouter() {
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<MainLayout />}>
-          {/* Landing / Overview */}
           <Route index element={<LandingPage />} />
 
-          {/* Unified Community & PRI Panchayat Portal */}
           <Route path="community" element={<CommunityPage />} />
-
-          {/* Backward compatibility redirects */}
           <Route path="citizen" element={<Navigate to="/community" replace />} />
           <Route path="panchayat" element={<Navigate to="/community" replace />} />
 
-          {/* Government Command Center & AI Triage */}
           <Route path="dashboard" element={<GovernmentPage />} />
-
-          {/* University R&D & Team Proposal Hub */}
           <Route path="university" element={<UniversityPage />} />
 
-          {/* Industry CSR Marketplace & Grants */}
+
           <Route path="industry" element={<IndustryPage />} />
-
-          {/* 24-District GIS Map */}
           <Route path="map" element={<MapPage />} />
-
-          {/* Authentication (Login / Register) */}
           <Route path="auth" element={<AuthPage />} />
 
-          {/* Catch-all Fallback */}
-          <Route path="*" element={<Navigate to="/" replace />} />
+
+          <Route path="*" element={<ErrorFallback/>} />
         </Route>
         
       </Routes>
