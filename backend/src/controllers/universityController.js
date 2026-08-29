@@ -1,3 +1,4 @@
+import mongoose from 'mongoose';
 import University from '../models/University.js';
 import User from '../models/User.js';
 import Proposal from '../models/Proposal.js';
@@ -453,6 +454,9 @@ export const createProposal = async (req, res) => {
     };
 
     if (peopleImpacted && Number(peopleImpacted) > 0) {
+      problemUpdate.peopleImpacted = Number(peopleImpacted);
+      problemUpdate['socialImpact.beneficiariesReached'] = Number(peopleImpacted);
+      problemUpdate['socialImpact.metricValue'] = Number(peopleImpacted).toLocaleString();
       problemUpdate['impactMetrics.metricValue'] = Number(peopleImpacted).toLocaleString();
       problemUpdate['impactMetrics.metricName'] = 'Lives Impacted';
     }
@@ -671,6 +675,157 @@ export const getUniversityById = async (req, res) => {
   }
 };
 
+/**
+ * @desc    Mark University R&D project as Finished/Completed and resolve the Problem to 'solved'
+ * @route   POST /api/universities/proposals/:proposalId/complete
+ * @access  Private (University Lead)
+ */
+export const completeProposal = async (req, res) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ success: false, message: 'Authentication required' });
+    }
+
+    const { proposalId } = req.params;
+    const { completionNotes } = req.body;
+
+    const proposal = await Proposal.findById(proposalId)
+      .populate('problem')
+      .populate('university')
+      .populate('industryOffer.industry');
+
+    if (!proposal) {
+      return res.status(404).json({ success: false, message: 'Proposal not found' });
+    }
+
+    let university = null;
+    if (req.user.university) {
+      university = await University.findById(req.user.university);
+    }
+    if (!university) {
+      university = proposal.university;
+    }
+    const universityName = university?.name || req.user.name || 'University R&D Team';
+
+    // 1. Mark Proposal status as completed
+    proposal.status = 'completed';
+    await proposal.save();
+
+    // 2. Mark Problem status as 'deployed' and resolutionStatus as 'solved'
+    const problemId = proposal.problem?._id || proposal.problem;
+    let problem = null;
+    if (problemId) {
+      problem = await Problem.findByIdAndUpdate(
+        problemId,
+        {
+          status: 'deployed',
+          resolutionStatus: 'solved',
+          progress: 100
+        },
+        { new: true }
+      );
+
+      if (problem) {
+        // 3. Add timeline event to the Problem
+        await pushProblemTimeline(
+          problem._id,
+          'Project Finished & Problem Solved',
+          `${universityName} successfully concluded the R&D implementation for '${proposal.title}'. Challenge marked as SOLVED across the state network. ${completionNotes ? `Notes: ${completionNotes}` : ''}`,
+          'green'
+        );
+
+        // 4. Send Notification to Citizen (Problem Submitter / Reporter)
+        let citizenUserId = problem.user || problem.submitter?.userId;
+        if (!citizenUserId && problem.submitter?.email) {
+          const matchedCitizen = await User.findOne({ email: problem.submitter.email.toLowerCase().trim() });
+          if (matchedCitizen) {
+            citizenUserId = matchedCitizen._id;
+          }
+        }
+
+        if (citizenUserId) {
+          try {
+            await User.findByIdAndUpdate(citizenUserId, {
+              $push: {
+                notifications: {
+                  $each: [{
+                    id: new mongoose.Types.ObjectId(),
+                    schemaName: 'Problem',
+                    title: `Your Reported Problem #${problem.ticketId} is SOLVED!`,
+                    description: `Great news! ${universityName} has finished the solution project '${proposal.title}' and deployed the fix in your area.`,
+                    read: false,
+                    createdAt: new Date()
+                  }],
+                  $position: 0
+                }
+              }
+            });
+          } catch (citErr) {
+            console.warn('[Citizen Notification Error]:', citErr.message);
+          }
+        }
+      }
+    }
+
+    // 5. Send Notification to Industry Partner
+    const industryPartnerId = proposal.industryOffer?.industry?._id || proposal.assignedIndustry;
+    if (industryPartnerId) {
+      try {
+        const notif = {
+          id: new mongoose.Types.ObjectId(),
+          schemaName: 'Proposal',
+          title: `Sponsored Project Completed (${proposal.domain || 'Innovation'})`,
+          description: `${universityName} has successfully completed the CSR-sponsored R&D solution for '${problem?.title || proposal.title}'. Solution deployed.`,
+          read: false,
+          createdAt: new Date()
+        };
+        await IndustryPartner.findByIdAndUpdate(industryPartnerId, {
+          $push: { notifications: { $each: [notif], $position: 0 } }
+        });
+      } catch (indErr) {
+        console.warn('[Industry Notification Error]:', indErr.message);
+      }
+    }
+
+    // 6. Send Notification to Government Officers
+    try {
+      await User.updateMany(
+        { role: { $in: ['government', 'admin'] } },
+        {
+          $push: {
+            notifications: {
+              $each: [{
+                id: new mongoose.Types.ObjectId(),
+                schemaName: 'Problem',
+                title: `Project Finished & Challenge Resolved #${problem?.ticketId || ''}`,
+                description: `${universityName} has concluded the tripartite project '${proposal.title}' for problem '${problem?.title || ''}'. Status updated to SOLVED.`,
+                read: false,
+                createdAt: new Date()
+              }],
+              $position: 0
+            }
+          }
+        }
+      );
+    } catch (govtErr) {
+      console.warn('[Govt Notification Error]:', govtErr.message);
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: 'Project marked as finished! Problem resolution updated to Solved.',
+      proposal,
+      problem
+    });
+  } catch (error) {
+    console.error('[Complete Proposal Error]:', error);
+    return res.status(500).json({
+      success: false,
+      message: error.message || 'Server error marking project as completed'
+    });
+  }
+};
+
 export default {
   getUniversities,
   getMyUniversity,
@@ -680,5 +835,6 @@ export default {
   markUniversityNotificationsRead,
   createProposal,
   respondToIndustryOffer,
+  completeProposal,
   getUniversityById
 };

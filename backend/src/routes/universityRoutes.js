@@ -8,6 +8,7 @@ import {
   markUniversityNotificationsRead,
   createProposal,
   respondToIndustryOffer,
+  completeProposal,
   getUniversityById
 } from '../controllers/universityController.js';
 import { protect, authorizeRoles } from '../middleware/authMiddleware.js';
@@ -26,9 +27,10 @@ router.put('/my', protect, updateMyUniversity);
 router.get('/my/notifications', protect, getUniversityNotifications);
 router.patch('/my/notifications/read', protect, markUniversityNotificationsRead);
 
-// Make Proposal & AI Industry Matching
+// Make Proposal & AI Industry Matching & Project Completion
 router.post('/proposals', protect, createProposal);
 router.post('/proposals/:proposalId/respond-offer', protect, respondToIndustryOffer);
+router.post('/proposals/:proposalId/complete', protect, completeProposal);
 
 // Individual University by ID (Public)
 router.get('/:id', getUniversityById);

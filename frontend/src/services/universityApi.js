@@ -39,6 +39,10 @@ export const universityApi = {
   respondToIndustryOffer: async (proposalId, responseData) => {
     const res = await apiClient.post(`/universities/proposals/${proposalId}/respond-offer`, responseData);
     return res.data;
+  },
+  completeProposal: async (proposalId, completionData = {}) => {
+    const res = await apiClient.post(`/universities/proposals/${proposalId}/complete`, completionData);
+    return res.data;
   }
 };
 

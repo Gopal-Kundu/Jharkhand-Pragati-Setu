@@ -326,21 +326,6 @@ export default function CommunityPortal() {
         </div>
 
         <div className="flex items-center space-x-3 self-start sm:self-auto">
-          {/* Notification Button (Clears badge to 0, no toaster, opens modal) */}
-          <button
-            onClick={handleOpenNotifications}
-            className="relative flex items-center space-x-2 px-4 py-3 rounded-2xl bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 font-bold text-sm shadow-sm transition-all hover:scale-105 cursor-pointer"
-            title="View All Notifications"
-          >
-            <Bell className="w-5 h-5 text-emerald-700" />
-            <span className="hidden sm:inline">Notifications</span>
-            {unreadCount > 0 && (
-              <span className="flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-rose-500 text-white font-mono text-[11px] font-black animate-pulse shadow-sm">
-                {unreadCount}
-              </span>
-            )}
-          </button>
-
           {/* Report a Problem Action */}
           <button
             onClick={() => setIsFormOpen(!isFormOpen)}

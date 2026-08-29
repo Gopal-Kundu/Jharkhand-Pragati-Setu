@@ -260,6 +260,7 @@ export default function IndustryPortal() {
     setSelectedProposalForOffer(proposal);
     setOfferForm({
       fundingAmount: proposal.estimatedBudget || 500000,
+      peopleImpacted: proposal.peopleImpacted || proposal.problem?.peopleImpacted || '',
       supportDetails: `CSR Matching Grant and equipment fabrication support deployed by ${myIndustry?.name || 'Corporate Sponsor'}.`,
       equipmentProvided: proposal.industrySupportRequired || ['IoT & Embedded Sensors'],
       mentorName: myIndustry?.leadMentors?.[0]?.name || authUser?.name || 'Corporate Mentor',
@@ -279,6 +280,7 @@ export default function IndustryPortal() {
       const payload = {
         action: 'offer',
         fundingAmount: Number(offerForm.fundingAmount) || 500000,
+        peopleImpacted: Number(offerForm.peopleImpacted) || selectedProposalForOffer.peopleImpacted || 0,
         supportDetails: offerForm.supportDetails,
         equipmentProvided: offerForm.equipmentProvided,
         mentorName: offerForm.mentorName,
@@ -983,15 +985,27 @@ export default function IndustryPortal() {
                 </div>
 
                 <div>
-                  <label className="block font-bold text-slate-700 mb-1">Lead Technical Mentor Name</label>
+                  <label className="block font-bold text-slate-700 mb-1">Estimated Beneficiaries / People Impacted</label>
                   <input
-                    type="text"
-                    placeholder="e.g. Corporate Technical Mentor"
-                    value={offerForm.mentorName}
-                    onChange={(e) => setOfferForm({ ...offerForm, mentorName: e.target.value })}
-                    className="w-full p-2.5 border border-slate-200 text-slate-900 bg-slate-50 font-medium rounded-xl focus:outline-none"
+                    type="number"
+                    min="0"
+                    placeholder="e.g. 50000"
+                    value={offerForm.peopleImpacted}
+                    onChange={(e) => setOfferForm({ ...offerForm, peopleImpacted: e.target.value })}
+                    className="w-full p-2.5 border border-slate-200 text-slate-900 bg-slate-50 font-medium rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 focus:outline-none"
                   />
                 </div>
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">Lead Technical Mentor Name</label>
+                <input
+                  type="text"
+                  placeholder="e.g. Corporate Technical Mentor"
+                  value={offerForm.mentorName}
+                  onChange={(e) => setOfferForm({ ...offerForm, mentorName: e.target.value })}
+                  className="w-full p-2.5 border border-slate-200 text-slate-900 bg-slate-50 font-medium rounded-xl focus:outline-none"
+                />
               </div>
 
               <div>

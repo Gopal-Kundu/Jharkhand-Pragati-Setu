@@ -180,6 +180,10 @@ const problemSchema = new mongoose.Schema(
         verifiedBy: { type: String, default: '' }
       }
     ],
+    peopleImpacted: {
+      type: Number,
+      default: 0
+    },
     socialImpact: {
       beneficiariesReached: { type: Number, default: 0 },
       economicSavingsInr: { type: Number, default: 0 },
@@ -199,8 +203,8 @@ const problemSchema = new mongoose.Schema(
     ],
     timeline: [
       {
-        title: { type: String, required: true },
-        description: { type: String, required: true },
+        title: { type: String, default: 'Milestone Update' },
+        description: { type: String, default: '' },
         colour: { type: String, default: 'green' },
         createdAt: { type: Date, default: Date.now }
       }

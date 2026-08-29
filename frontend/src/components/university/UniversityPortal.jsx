@@ -131,6 +131,12 @@ export default function UniversityPortal() {
     industrySupportRequired: []
   });
 
+  // Project Finished Modal State
+  const [isCompleteModalOpen, setIsCompleteModalOpen] = useState(false);
+  const [selectedProposalForComplete, setSelectedProposalForComplete] = useState(null);
+  const [completionNotes, setCompletionNotes] = useState('');
+  const [submittingComplete, setSubmittingComplete] = useState(false);
+
   // Load User's University Profile and problems
   const loadUniversityData = async (showLoading = false) => {
     if (!isAuthenticated) {
@@ -336,7 +342,13 @@ export default function UniversityPortal() {
       }
 
       if (res.proposal) {
-        setMyProposals(prev => [res.proposal, ...(Array.isArray(prev) ? prev : [])]);
+        setMyUniversity(prev => {
+          if (!prev) return prev;
+          return {
+            ...prev,
+            proposals: [res.proposal, ...(Array.isArray(prev.proposals) ? prev.proposals : [])]
+          };
+        });
       }
 
       // Refresh in background silently
@@ -533,8 +545,76 @@ export default function UniversityPortal() {
     }
   };
 
+  // Open Complete Project Modal
+  const handleOpenCompleteModal = (prop) => {
+    setSelectedProposalForComplete(prop);
+    setCompletionNotes('');
+    setIsCompleteModalOpen(true);
+  };
+
+  // Confirm Complete Project & Mark Solved
+  const handleConfirmCompleteProject = async (e) => {
+    if (e) e.preventDefault();
+    if (!selectedProposalForComplete) return;
+
+    try {
+      setSubmittingComplete(true);
+      const res = await universityApi.completeProposal(selectedProposalForComplete._id, {
+        completionNotes: completionNotes.trim()
+      });
+
+      setIsCompleteModalOpen(false);
+      toast.success(res.message || 'Project finished! Problem resolution marked as Solved.');
+
+      // Optimistic update of local proposals & problems
+      if (myUniversity?.proposals) {
+        setMyUniversity(prev => {
+          if (!prev) return prev;
+          const updatedProposals = (prev.proposals || []).map(p => {
+            if (p._id === selectedProposalForComplete._id) {
+              return {
+                ...p,
+                status: 'completed',
+                problem: {
+                  ...(p.problem || {}),
+                  status: 'deployed',
+                  resolutionStatus: 'solved',
+                  progress: 100
+                }
+              };
+            }
+            return p;
+          });
+          return { ...prev, proposals: updatedProposals };
+        });
+      }
+
+      const problemId = selectedProposalForComplete.problem?._id || selectedProposalForComplete.problem;
+      setAllProblems(prev =>
+        prev.map(p => {
+          if (p._id === problemId || p.ticketId === selectedProposalForComplete.problem?.ticketId) {
+            return {
+              ...p,
+              status: 'deployed',
+              resolutionStatus: 'solved',
+              progress: 100
+            };
+          }
+          return p;
+        })
+      );
+
+      // Background silent sync
+      loadUniversityData(false);
+    } catch (err) {
+      toast.error(err.response?.data?.message || err.message || 'Failed to complete project');
+    } finally {
+      setSubmittingComplete(false);
+    }
+  };
+
   // Helper to check if a problem is unsolved
-  const isUnsolved = (p) => p?.resolutionStatus !== 'solved' && p?.status !== 'validated';
+  const isUnsolved = (p) => p?.resolutionStatus !== 'solved' && p?.status !== 'validated' && p?.status !== 'deployed';
 
   // 3. Recommended Problems: Matched by availableDomains or live notifications & Unsolved
   const registeredDomains = myUniversity.availableDomains || [];
@@ -562,7 +642,13 @@ export default function UniversityPortal() {
 
   const myProposals = myUniversity.proposals || [];
   const pendingOffers = myProposals.filter(p => p?.industryOffer?.industry && p?.industryOffer?.responseStatus === 'pending');
-  const acceptedOffers = myProposals.filter(p => p?.industryOffer?.responseStatus === 'accepted' || p?.status === 'accepted_by_university' || p?.status === 'approved_by_govt' || p?.status === 'in_progress');
+  const acceptedOffers = myProposals.filter(p => 
+    p?.industryOffer?.responseStatus === 'accepted' || 
+    p?.status === 'accepted_by_university' || 
+    p?.status === 'approved_by_govt' || 
+    p?.status === 'in_progress' || 
+    p?.status === 'completed'
+  );
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 animate-in fade-in">
@@ -924,14 +1010,29 @@ export default function UniversityPortal() {
                       </div>
 
                       {/* Card Action */}
-                      <div className="pt-4 border-t border-slate-100 flex items-center justify-between">
+                      <div className="pt-4 border-t border-slate-100 flex items-center justify-between gap-2 flex-wrap">
                         <button
                           onClick={() => setSelectedProblemIdForModal(problem._id || problem.ticketId)}
-                          className="text-xs font-bold text-slate-600 hover:text-emerald-700 flex items-center space-x-1 cursor-pointer transition-colors"
+                          className="bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold px-3.5 py-2 rounded-xl border border-slate-200 flex items-center space-x-1.5 cursor-pointer transition-all hover:scale-105 shadow-sm"
                         >
-                          <Eye className="w-3.5 h-3.5" />
+                          <Eye className="w-3.5 h-3.5 text-slate-600" />
                           <span>Inspect Problem &amp; Timeline</span>
                         </button>
+
+                        {prop.status === 'completed' || problem.resolutionStatus === 'solved' ? (
+                          <div className="inline-flex items-center space-x-1.5 px-4 py-2 rounded-xl bg-emerald-100 text-emerald-900 text-xs font-bold border border-emerald-300 shadow-sm">
+                            <CheckCircle2 className="w-4 h-4 text-emerald-700" />
+                            <span>✓ Project Finished (Solved)</span>
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => handleOpenCompleteModal(prop)}
+                            className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-bold text-xs px-4 py-2 rounded-xl shadow-md shadow-emerald-600/20 cursor-pointer flex items-center space-x-1.5 transition-all hover:scale-105"
+                          >
+                            <CheckCircle2 className="w-4 h-4" />
+                            <span>Project Finished</span>
+                          </button>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -1333,6 +1434,87 @@ export default function UniversityPortal() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Project Finished Confirmation Modal */}
+      {isCompleteModalOpen && selectedProposalForComplete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-sm animate-in fade-in">
+          <div className="bg-white text-slate-900 max-w-lg w-full rounded-3xl p-6 sm:p-8 shadow-2xl border border-slate-200 space-y-4 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <div className="flex items-center space-x-2 text-emerald-800 font-black">
+                <CheckCircle2 className="w-6 h-6 text-emerald-600" />
+                <h3 className="text-lg font-bold font-heading">Mark Project as Finished</h3>
+              </div>
+              <button
+                onClick={() => setIsCompleteModalOpen(false)}
+                className="p-1 rounded-xl hover:bg-slate-100 text-slate-400 hover:text-slate-700 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-3 text-xs text-slate-600">
+              <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-4 space-y-1">
+                <span className="font-bold text-emerald-950 block text-sm">
+                  {selectedProposalForComplete.title}
+                </span>
+                <p className="text-[11px] text-emerald-800">
+                  Target Problem: <strong className="text-emerald-950">{selectedProposalForComplete.problem?.title || selectedProposalForComplete.problemStatement}</strong>
+                </p>
+              </div>
+
+              <p className="leading-relaxed">
+                By marking this project as finished:
+              </p>
+              <ul className="list-disc pl-5 space-y-1 text-slate-700">
+                <li>The societal problem will be officially marked as <strong>SOLVED</strong>.</li>
+                <li>A milestone timeline entry will be posted to the problem record.</li>
+                <li>Instant notifications will be broadcasted to the <strong>Citizen Reporter</strong>, <strong>Corporate Industry Partner</strong>, and <strong>Government Innovation Directorate</strong>.</li>
+              </ul>
+
+              <div className="pt-2">
+                <label className="block text-xs font-bold text-slate-700 mb-1">
+                  Completion Summary / Field Deployment Notes (Optional)
+                </label>
+                <textarea
+                  rows={3}
+                  placeholder="Describe the final prototype deployed, testing outcome, or key achievement..."
+                  value={completionNotes}
+                  onChange={(e) => setCompletionNotes(e.target.value)}
+                  className="w-full text-xs text-slate-900 bg-slate-50 border border-slate-200 focus:border-emerald-500 rounded-xl p-3 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+                />
+              </div>
+            </div>
+
+            <div className="pt-3 border-t border-slate-100 flex items-center justify-end space-x-3">
+              <button
+                type="button"
+                onClick={() => setIsCompleteModalOpen(false)}
+                className="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmCompleteProject}
+                disabled={submittingComplete}
+                className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-5 py-2.5 rounded-xl shadow-md shadow-emerald-600/20 cursor-pointer flex items-center space-x-1.5 transition-all hover:scale-105"
+              >
+                {submittingComplete ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>Deploying Solution...</span>
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle2 className="w-4 h-4" />
+                    <span>Confirm Project Finished</span>
+                  </>
+                )}
+              </button>
+            </div>
           </div>
         </div>
       )}

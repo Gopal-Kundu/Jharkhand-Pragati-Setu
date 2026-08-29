@@ -255,6 +255,7 @@ export const makeProposalOffer = async (req, res) => {
     const {
       action,
       fundingAmount,
+      peopleImpacted,
       supportDetails,
       equipmentProvided,
       mentorName,
@@ -329,7 +330,22 @@ export const makeProposalOffer = async (req, res) => {
     proposal.industryOffer = offerPayload;
     proposal.assignedIndustry = industry._id;
     proposal.status = 'offered_by_industry';
+    if (peopleImpacted && Number(peopleImpacted) > 0) {
+      proposal.peopleImpacted = Number(peopleImpacted);
+    }
     await proposal.save();
+
+    // Update Problem peopleImpacted if modified
+    if (proposal.problem && peopleImpacted && Number(peopleImpacted) > 0) {
+      const problemTargetId = proposal.problem._id || proposal.problem;
+      await Problem.findByIdAndUpdate(problemTargetId, {
+        peopleImpacted: Number(peopleImpacted),
+        'socialImpact.beneficiariesReached': Number(peopleImpacted),
+        'socialImpact.metricValue': Number(peopleImpacted).toLocaleString(),
+        'impactMetrics.metricValue': Number(peopleImpacted).toLocaleString(),
+        'impactMetrics.metricName': 'Lives Impacted'
+      });
+    }
 
     // Link proposal to Industry
     await IndustryPartner.findByIdAndUpdate(industry._id, {
