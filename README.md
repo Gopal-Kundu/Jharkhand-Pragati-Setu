@@ -15,6 +15,26 @@
 
 Citizens and Gram Panchayats report localized grievances and infrastructural bottlenecks with rich multimedia evidence. Our proprietary **AI Intelligence Engine** automatically triages, scores severity, deduplicates, and matches challenges to university research laboratories. Universities formulate multidisciplinary student-faculty teams, submit solution proposals, secure corporate CSR matching grants, and receive statutory Government Sanction Orders.
 
+---
+
+## 📸 Platform Visual Tour & Screenshots
+
+| 🏠 Landing & Discovery Portal | 🏆 Solved Challenges Showcase |
+|:---:|:---:|
+| <img src="./frontend/src/assets/Images/Landing%20Page.png" alt="Jharkhand Pragati Setu Landing Page" width="100%"/> | <img src="./frontend/src/assets/Images/Solved%20Problem%20Screen%20Landing%20page%20p-2.png" alt="Solved Problem Screen Landing page" width="100%"/> |
+| *Modern Citizen & Institutional Onboarding Portal* | *Real-Time Telemetry & Solved Challenge Showcase* |
+
+| 👨‍🌾 Citizen Problem Reporting | 🎓 University Research Hub |
+|:---:|:---:|
+| <img src="./frontend/src/assets/Images/Community%20Page%20Report%20Problem.png" alt="Community Page Report Problem" width="100%"/> | <img src="./frontend/src/assets/Images/University%20Page.png" alt="University Research & Lab Portal" width="100%"/> |
+| *Multipart Evidence Upload & AI Duplicate Check* | *Lab Capability Management & Proposal Formulation* |
+
+| 🏢 Industry CSR Matching | 🏛️ Government Tripartite Sanction |
+|:---:|:---:|
+| <img src="./frontend/src/assets/Images/Industry%20Page%20accepting%20proposal.png" alt="Industry Page accepting proposal" width="100%"/> | <img src="./frontend/src/assets/Images/Govt%20page%20project%20approval.png" alt="Govt page project approval" width="100%"/> |
+| *CSR Section 135 Allocation & Grant Pledge Desk* | *3-Pillar Unified Inspection & Sanction Orders* |
+
+---
 
 ## ✨ Key Features & Stakeholder Portals
 
@@ -23,6 +43,8 @@ Citizens and Gram Panchayats report localized grievances and infrastructural bot
 - **Rich Multipart Evidence Upload**: Upload multiple photos, video walkthroughs, and PDF documents directly to Cloudinary CDN storage.
 - **AI Duplicate Detection**: Real-time semantic duplicate check to prevent duplicate grievances in the same locality.
 - **End-to-End Audit Trail**: Live milestone progress tracking from submission $\rightarrow$ AI triage $\rightarrow$ HEI research $\rightarrow$ CSR funding $\rightarrow$ field deployment.
+
+
 
 ### 2. ⚡ AI Triage & Matchmaking Engine (`/api/ai`)
 - **10 Canonical Domain Classification**: Real-time classification into state-defined innovation domains.
@@ -36,17 +58,23 @@ Citizens and Gram Panchayats report localized grievances and infrastructural bot
 - **Structured Proposal Creation**: Submit technical solutions with milestones, tech stack, duration, and budget.
 - **Accepted Offers & Govt Sanctions**: View all accepted CSR sponsorships forwarded to the State Government with real-time statutory sanction tracking.
 
+
+
 ### 4. 🏢 Industry CSR & Innovation Exchange (`/industry`)
 - **Corporate Profile Registration**: Register company details, Section 135 CSR annual allocation pool, and support capabilities.
 - **Targeted Proposal Discovery**: Filter university proposals by domain, keyword search, or AI recommendations.
 - **Tripartite CSR Co-Sponsorship**: Pledge grant funds, hardware/equipment, and assign corporate technical mentors.
 - **Interactive Review & Decline Modals**: Accept or decline proposals with structured feedback notifications sent directly to universities.
 
+
+
 ### 5. 🏛️ Government Tripartite Sanction Desk (`/dashboard`)
 - **3-Pillar Unified Proposal Inspection**: Review Citizen Problem Details, University Technical Solution, and Industry CSR Commitments side-by-side.
 - **Statutory Sanction Order Generation**: Issue official government sanction orders (e.g. `JH-SANCTION-2026-XXXX`) with administrative remarks.
 - **Decline / Revision Management**: Decline proposals with formal reasons dispatched instantly to both HEI and Industry partners.
 - **Real-Time Notification Dispatch**: Automatic multi-party notification routing across all stakeholders.
+
+
 
 ### 6. 🗺️ 24-District GIS Telemetry Map (`/map`)
 - **Interactive Geospatial Hotspots**: Leaflet-powered GIS mapping displaying challenge density across all 24 districts of Jharkhand.
@@ -119,6 +147,7 @@ Jharkhand-Pragati-Setu/
 │   ├── public/               # Static Assets & Jharkhand Emblems
 │   ├── src/
 │   │   ├── assets/           # UI Images and Illustrations
+│   │   │   └── Images/       # Platform Screenshots & Showcase Gallery
 │   │   ├── components/       # Stakeholder Portals, Modals & GIS Maps
 │   │   │   ├── citizen/      # Problem Submission Modals & Citizen Portals
 │   │   │   ├── common/       # Navbar, Footer, Problem Details Modal, AI Assistant
