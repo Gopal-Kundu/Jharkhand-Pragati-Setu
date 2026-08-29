@@ -13,10 +13,12 @@ const isHttps = process.env.NODE_ENV === 'production' || process.env.VERCEL === 
  * @param {Object} res - Express Response object
  * @param {string} userId - Mongo ID of the authenticated user
  */
+const isProduction = process.env.NODE_ENV === 'production' || process.env.VERCEL === '1' || Boolean(process.env.CLIENT_URL && process.env.CLIENT_URL.startsWith('https'));
+
 const cookieOptions = {
   httpOnly: true,
-  secure: process.env.NODE_ENV === 'production',
-  sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+  secure: isProduction,
+  sameSite: isProduction ? 'none' : 'lax',
   maxAge: 7 * 24 * 60 * 60 * 1000,
 };
 const sendTokenCookie = (res, userId) => {

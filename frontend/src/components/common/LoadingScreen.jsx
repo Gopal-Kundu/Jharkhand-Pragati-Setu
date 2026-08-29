@@ -55,7 +55,6 @@ export default function LoadingScreen({ message = 'Loading Jharkhand Pragati Set
 
           {/* Dynamic Status Text */}
           <div className="flex items-center justify-center space-x-2 text-xs font-mono font-medium text-slate-500">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping" />
             <span>{message}</span>
           </div>
         </div>
