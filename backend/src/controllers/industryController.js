@@ -77,8 +77,12 @@ export const registerIndustry = async (req, res) => {
     const domains = availableDomains || focusDomains || ['Water Resources', 'Agriculture'];
     const cleanSupport = Array.isArray(supportCapabilities) ? supportCapabilities : ['IoT & Embedded Sensors'];
     const cleanMentors = Array.isArray(leadMentors) && leadMentors.length > 0
-      ? leadMentors
-      : [{ name: req.user.name || 'Corporate Mentor', designation: 'Technical Lead', domain: domains[0] || 'Water Resources' }];
+      ? leadMentors.map(m => ({
+          name: (m && typeof m.name === 'string' && m.name.trim()) ? m.name.trim() : (req.user.name || 'Corporate Mentor'),
+          designation: (m && typeof m.designation === 'string' && m.designation.trim()) ? m.designation.trim() : 'Technical Lead',
+          domain: (m && typeof m.domain === 'string' && m.domain.trim()) ? m.domain.trim() : (domains[0] || 'Others')
+        }))
+      : [{ name: req.user.name || 'Corporate Mentor', designation: 'Technical Lead', domain: domains[0] || 'Others' }];
 
     const partnerId = `IND-${Date.now().toString(36).toUpperCase()}-${Math.floor(Math.random() * 900 + 100)}`;
 
@@ -164,7 +168,13 @@ export const updateMyIndustry = async (req, res) => {
     if (supportCapabilities) industry.supportCapabilities = supportCapabilities;
     if (csrAnnualBudgetInr) industry.csrAnnualBudgetInr = Number(csrAnnualBudgetInr);
     if (contactEmail) industry.contactEmail = contactEmail;
-    if (leadMentors) industry.leadMentors = leadMentors;
+    if (leadMentors && Array.isArray(leadMentors)) {
+      industry.leadMentors = leadMentors.map(m => ({
+        name: (m && typeof m.name === 'string' && m.name.trim()) ? m.name.trim() : (req.user.name || 'Corporate Mentor'),
+        designation: (m && typeof m.designation === 'string' && m.designation.trim()) ? m.designation.trim() : 'Technical Lead',
+        domain: (m && typeof m.domain === 'string' && m.domain.trim()) ? m.domain.trim() : (domains[0] || 'Others')
+      }));
+    }
 
     await industry.save();
 

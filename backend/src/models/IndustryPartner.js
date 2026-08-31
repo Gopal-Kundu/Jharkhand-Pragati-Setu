@@ -60,9 +60,9 @@ const industryPartnerSchema = new mongoose.Schema(
     },
     leadMentors: [
       {
-        name: { type: String, required: true },
-        designation: { type: String, required: true },
-        domain: { type: String, required: true }
+        name: { type: String, default: 'Corporate Lead' },
+        designation: { type: String, default: 'Technical Lead' },
+        domain: { type: String, default: 'Others' }
       }
     ],
     contactEmail: {

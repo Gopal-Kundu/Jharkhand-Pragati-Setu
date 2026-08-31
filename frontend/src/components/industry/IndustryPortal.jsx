@@ -183,8 +183,8 @@ export default function IndustryPortal() {
         csrAnnualBudgetInr: Number(industryForm.csrAnnualBudgetInr) || 5000000,
         contactEmail: industryForm.contactEmail,
         leadMentors: [{
-          name: industryForm.mentorName,
-          designation: industryForm.mentorDesignation,
+          name: industryForm.mentorName?.trim() || authUser?.name || 'Corporate Mentor',
+          designation: industryForm.mentorDesignation?.trim() || 'Technical Lead',
           domain: industryForm.availableDomains[0] || 'Water Resources'
         }]
       };
@@ -215,8 +215,8 @@ export default function IndustryPortal() {
         csrAnnualBudgetInr: Number(industryForm.csrAnnualBudgetInr) || 5000000,
         contactEmail: industryForm.contactEmail,
         leadMentors: [{
-          name: industryForm.mentorName,
-          designation: industryForm.mentorDesignation,
+          name: industryForm.mentorName?.trim() || authUser?.name || 'Corporate Mentor',
+          designation: industryForm.mentorDesignation?.trim() || 'Technical Lead',
           domain: industryForm.availableDomains[0] || 'Water Resources'
         }]
       };
@@ -534,7 +534,7 @@ export default function IndustryPortal() {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div>
                 <label className="block font-bold text-slate-700 mb-1">Lead Representative / Mentor Name</label>
                 <input
@@ -542,6 +542,17 @@ export default function IndustryPortal() {
                   placeholder="e.g. Corporate Technical Lead"
                   value={industryForm.mentorName}
                   onChange={(e) => setIndustryForm({ ...industryForm, mentorName: e.target.value })}
+                  className="w-full p-2.5 border border-slate-200 text-slate-900 bg-slate-50 font-medium rounded-xl focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">Mentor Designation</label>
+                <input
+                  type="text"
+                  placeholder="e.g. Technical Director / Lead"
+                  value={industryForm.mentorDesignation}
+                  onChange={(e) => setIndustryForm({ ...industryForm, mentorDesignation: e.target.value })}
                   className="w-full p-2.5 border border-slate-200 text-slate-900 bg-slate-50 font-medium rounded-xl focus:outline-none"
                 />
               </div>
