@@ -22,7 +22,6 @@ export default function AuthPage() {
     password: '',
     role: 'citizen',
     organization: '',
-    department: '',
     district: 'Ranchi'
   });
 
@@ -138,10 +137,16 @@ export default function AuthPage() {
           <button
             type="submit"
             disabled={authState.loading}
-            className="w-full flex items-center justify-center space-x-2 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs sm:text-sm shadow-md shadow-emerald-600/20 transition-all hover:scale-[1.02] cursor-pointer"
+            className="w-full flex items-center justify-center space-x-2 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs sm:text-sm shadow-md shadow-emerald-600/20 transition-all hover:scale-[1.02] cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
           >
-            <span>{authState.loading ? 'Authenticating...' : mode === 'login' ? 'Sign In' : 'Create Account'}</span>
-            <ArrowRight className="w-4 h-4" />
+            {authState.loading ? (
+              <span>Authenticating...</span>
+            ) : (
+              <>
+                <span>{mode === 'login' ? 'Sign In' : 'Create Account'}</span>
+                <ArrowRight className="w-4 h-4" />
+              </>
+            )}
           </button>
         </form>
 

@@ -32,7 +32,8 @@ const DOMAINS = [
   'Urban Development',
   'Accessibility',
   'Public Administration',
-  'Rural Livelihoods'
+  'Rural Livelihoods',
+  'Others'
 ];
 
 const DOMAIN_ICONS = {
@@ -45,7 +46,8 @@ const DOMAIN_ICONS = {
   'Urban Development': Building,
   'Accessibility': Eye,
   'Public Administration': FileCheck,
-  'Rural Livelihoods': Footprints
+  'Rural Livelihoods': Footprints,
+  'Others': Eye
 };
 
 export default function TrackGovernmentChallenges() {
@@ -75,6 +77,7 @@ export default function TrackGovernmentChallenges() {
   const filteredProblems = problems.filter(p => {
     const matchesSearch =
       !searchQuery.trim() ||
+      p._id?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       p.ticketId?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       p.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       p.location?.district?.toLowerCase().includes(searchQuery.toLowerCase()) ||

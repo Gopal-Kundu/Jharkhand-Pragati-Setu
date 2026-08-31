@@ -7,16 +7,8 @@ dotenv.config();
 
 export const SIH_DOMAINS = CANONICAL_DOMAINS;
 
-/**
- * Initialize AI client using API key from .env
- */
-const getAIClient = () => {
-  const apiKey = process.env.AI_API_KEY || process.env.GEMINI_API_KEY;
-  if (!apiKey || apiKey.includes('YOUR_API_KEY')) {
-    return null;
-  }
-  return new GoogleGenerativeAI(apiKey);
-};
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+const DEFAULT_MODEL = process.env.GEMINI_MODEL;
 
 /**
  * @desc    AI Automatic Categorization (Assigns Domain & Checks Location Duplicates)
@@ -34,7 +26,7 @@ export const categorizeProblem = async (req, res) => {
       });
     }
 
-    const district = location.district || location.districtName || 'Ranchi';
+    const district = location.district || 'Ranchi';
     const block = location.block || '';
     const panchayat = location.panchayat || '';
 
@@ -48,7 +40,7 @@ export const categorizeProblem = async (req, res) => {
     }
 
     const existingInLocality = await Problem.find(locFilter)
-      .select('ticketId title description domain location status')
+      .select('title description domain location status')
       .limit(20);
 
     // 2. Check for duplicate problem in that location
@@ -57,7 +49,7 @@ export const categorizeProblem = async (req, res) => {
       existingInLocality
     );
 
-    // 3. AI Assigns Domain from the 10 Canonical Domains
+    // 3. AI Assigns Domain from the Canonical Domains
     const aiDomainResult = await analyzeAndClassifyProblem(title, description, { district, block, panchayat });
     const decidedDomain = aiDomainResult.domain || 'Water Resources';
 
@@ -67,7 +59,7 @@ export const categorizeProblem = async (req, res) => {
         domain: decidedDomain,
         duplicateCheck: {
           isDuplicate: duplicateResult.isDuplicate,
-          matchedTicketId: duplicateResult.matchedTicketId || null,
+          matchedProblemId: duplicateResult.matchedProblemId || duplicateResult.matchedTicketId || null,
           reason: duplicateResult.explanation || ''
         }
       }
@@ -97,28 +89,24 @@ export const aiChat = async (req, res) => {
       });
     }
 
-    const aiClient = getAIClient();
-    const modelName = process.env.AI_MODEL || process.env.GEMINI_MODEL || 'gemini-2.0-flash';
-
+    const modelName = DEFAULT_MODEL;
     let reply = '';
 
-    if (aiClient) {
-      try {
-        const model = aiClient.getGenerativeModel({ model: modelName });
-        const systemPrompt = `
-          You are "Pragati AI", the intelligent orchestrator of the Smart India Hackathon (SIH 2026) Societal Problem-to-Innovation Ecosystem in Jharkhand.
-          The user has the role: "${contextRole || 'citizen'}".
-          Platform workflow: Citizens / Local Bodies (PRI/ULB) → AI Domain Assignment & Location Deduplication → Government Institutional Allocation → Universities & Multidisciplinary Teams (Proposals) → Industry / CSR Grants & Mentorship → Milestone Field Testing & Measurable Social Impact.
-          10 Domains: Education, Agriculture, Healthcare, Water Resources, Environment, Energy, Urban Development, Accessibility, Public Administration, Rural Livelihoods.
+    try {
+      const model = genAI.getGenerativeModel({ model: modelName });
+      const systemPrompt = `
+        You are "Pragati AI", the intelligent orchestrator of the Smart India Hackathon (SIH 2026) Societal Problem-to-Innovation Ecosystem in Jharkhand.
+        The user has the role: "${contextRole || 'citizen'}".
+        Platform workflow: Citizens / Local Bodies (PRI/ULB) → AI Domain Assignment & Location Deduplication → Government Institutional Allocation → Universities & Multidisciplinary Teams (Proposals) → Industry / CSR Grants & Mentorship → Milestone Field Testing & Measurable Social Impact.
+        Domains: Education, Agriculture, Healthcare, Water Resources, Environment, Energy, Urban Development, Accessibility, Public Administration, Rural Livelihoods, Others.
 
-          Provide clear, concise, actionable, and encouraging answers formatted in markdown.
-        `;
+        Provide clear, concise, actionable, and encouraging answers formatted in markdown.
+      `;
 
-        const result = await model.generateContent(`${systemPrompt}\n\nUser Question: ${message}`);
-        reply = result.response.text();
-      } catch (err) {
-        console.warn(`[AI Chat (${modelName}) Warning]:`, err.message);
-      }
+      const result = await model.generateContent(`${systemPrompt}\n\nUser Question: ${message}`);
+      reply = result.response.text();
+    } catch (err) {
+      console.warn(`[AI Chat (${modelName}) Warning]:`, err.message);
     }
 
     if (!reply) {

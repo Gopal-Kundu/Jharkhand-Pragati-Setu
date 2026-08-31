@@ -10,29 +10,31 @@ import Problem from '../models/Problem.js';
 export const pushProblemTimeline = async (problemId, titleOrData, description, colour = 'green') => {
   let finalTitle = titleOrData;
   let finalDescription = description;
-  let finalColour = colour || 'green';
 
   if (typeof titleOrData === 'object' && titleOrData !== null) {
     finalTitle = titleOrData.title || titleOrData.action || 'Milestone Update';
     finalDescription = titleOrData.description || titleOrData.note || '';
-    finalColour = titleOrData.colour || titleOrData.color || 'green';
   } else if (!description && typeof titleOrData === 'string') {
     finalDescription = titleOrData;
     finalTitle = 'Milestone Update';
   }
 
-  const timelineEntry = {
-    title: finalTitle || 'Milestone Update',
-    description: finalDescription || '',
-    colour: finalColour || 'green',
-    createdAt: new Date()
+  const auditEntry = {
+    action: finalTitle || 'Milestone Update',
+    note: finalDescription || '',
+    officer: 'System / Project Lead',
+    role: 'university',
+    timestamp: new Date()
   };
 
   const updated = await Problem.findByIdAndUpdate(
     problemId,
     {
       $push: {
-        timeline: timelineEntry
+        auditHistory: {
+          $each: [auditEntry],
+          $position: 0
+        }
       }
     },
     { new: true }
@@ -42,14 +44,14 @@ export const pushProblemTimeline = async (problemId, titleOrData, description, c
 };
 
 /**
- * @desc    Add a milestone event to a problem's timeline via API
+ * @desc    Add a milestone event to a problem's audit history via API
  * @route   POST /api/problems/:problemId/timeline
  * @access  Private
  */
 export const addTimelineEvent = async (req, res) => {
   try {
     const { problemId } = req.params;
-    const { title, description, colour = 'green' } = req.body;
+    const { title, description } = req.body;
 
     if (!title || !description) {
       return res.status(400).json({
@@ -66,12 +68,12 @@ export const addTimelineEvent = async (req, res) => {
       });
     }
 
-    const updatedProblem = await pushProblemTimeline(problemId, title, description, colour);
+    const updatedProblem = await pushProblemTimeline(problemId, title, description);
 
     return res.status(201).json({
       success: true,
       message: 'Timeline event successfully added',
-      timeline: updatedProblem.timeline
+      auditHistory: updatedProblem.auditHistory
     });
   } catch (error) {
     console.error('[Add Timeline Event Error]:', error);

@@ -10,12 +10,6 @@ import mongoose from 'mongoose';
  */
 const problemSchema = new mongoose.Schema(
   {
-    ticketId: {
-      type: String,
-      required: true,
-      unique: true,
-      index: true
-    },
     title: {
       type: String,
       required: [true, 'Problem title is required'],
@@ -52,16 +46,7 @@ const problemSchema = new mongoose.Schema(
       lat: { type: Number, default: 23.3441 },
       lng: { type: Number, default: 85.3096 },
       address: { type: String, default: '' },
-      pincode: { type: String, default: '' },
-      geoPoint: {
-        type: { type: String, enum: ['Point'], default: 'Point' },
-        coordinates: { type: [Number], default: [85.3096, 23.3441] } // GeoJSON: [longitude, latitude]
-      }
-    },
-    user: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'User',
-      index: true
+      pincode: { type: String, default: '' }
     },
     submitter: {
       userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
@@ -73,8 +58,7 @@ const problemSchema = new mongoose.Schema(
       },
       organization: { type: String, default: 'Community Resident' },
       email: { type: String, default: '' },
-      phone: { type: String, default: '' },
-      isAnonymous: { type: Boolean, default: false }
+      phone: { type: String, default: '' }
     },
     evidence: [
       {
@@ -114,40 +98,14 @@ const problemSchema = new mongoose.Schema(
       default: 'Medium'
     },
     allocatedUniversity: {
-      universityId: { type: String, default: null },
-      name: { type: String, default: null },
-      facultyLead: {
-        name: { type: String, default: '' },
-        email: { type: String, default: '' },
-        department: { type: String, default: '' }
-      },
-      allocatedAt: { type: Date, default: null },
-      deadline: { type: Date, default: null }
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'University',
+      default: null
     },
     proposals: [
       {
-        id: { type: String, required: true },
-        title: { type: String, required: true },
-        teamLead: { type: String, required: true },
-        facultyAdvisor: { type: String, default: '' },
-        multidisciplinaryTeam: [
-          {
-            name: { type: String, required: true },
-            role: { type: String, default: 'Researcher' },
-            department: { type: String, required: true },
-            institution: { type: String, default: '' }
-          }
-        ],
-        abstract: { type: String, default: '' },
-        timelineMonths: { type: Number, default: 6 },
-        estimatedBudget: { type: Number, default: 500000 },
-        techStack: [String],
-        submissionDate: { type: Date, default: Date.now },
-        status: {
-          type: String,
-          enum: ['pending_review', 'approved', 'under_revision', 'rejected'],
-          default: 'pending_review'
-        }
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Proposal'
       }
     ],
     proposalGivenUniversity: [
@@ -158,14 +116,8 @@ const problemSchema = new mongoose.Schema(
     ],
     industryPartners: [
       {
-        partnerId: { type: String, required: true },
-        name: { type: String, required: true },
-        type: { type: String, default: 'CSR Enterprise' },
-        grantAmount: { type: Number, default: 0 },
-        status: { type: String, enum: ['pledged', 'disbursed', 'completed'], default: 'pledged' },
-        pledgedAt: { type: Date, default: Date.now },
-        mentorAssigned: { type: String, default: '' },
-        csrReference: { type: String, default: '' }
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'IndustryPartner'
       }
     ],
     milestones: [
@@ -182,7 +134,7 @@ const problemSchema = new mongoose.Schema(
     ],
     peopleImpacted: {
       type: Number,
-      default: 0
+      default: 1000
     },
     socialImpact: {
       beneficiariesReached: { type: Number, default: 0 },
@@ -203,7 +155,7 @@ const problemSchema = new mongoose.Schema(
     ],
     timeline: [
       {
-        title: { type: String, default: 'Milestone Update' },
+        title: { type: String, required: true },
         description: { type: String, default: '' },
         colour: { type: String, default: 'green' },
         createdAt: { type: Date, default: Date.now }
@@ -217,7 +169,6 @@ const problemSchema = new mongoose.Schema(
 
 // Search indexes for text and geospatial coordinates
 problemSchema.index({ title: 'text', description: 'text' });
-problemSchema.index({ 'location.geoPoint': '2dsphere' });
 problemSchema.index({ 'location.lat': 1, 'location.lng': 1 });
 problemSchema.index({ 'location.district': 1, 'location.block': 1, 'location.panchayat': 1 });
 

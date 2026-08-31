@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { universityApi } from '../../services/universityApi';
 import { problemApi } from '../../services/problemApi';
 import ProblemDetailsModal from '../common/ProblemDetailsModal';
+import ProposalDetailsModal from '../common/ProposalDetailsModal';
 import { useSelector } from 'react-redux';
 import { Link } from 'react-router-dom';
 import { 
@@ -49,7 +50,8 @@ const ALL_DOMAINS = [
   'Urban Development',
   'Accessibility',
   'Public Administration',
-  'Rural Livelihoods'
+  'Rural Livelihoods',
+  'Others'
 ];
 
 
@@ -89,6 +91,8 @@ export default function UniversityPortal() {
   const [myUniversity, setMyUniversity] = useState(null);
   const [loadingUniv, setLoadingUniv] = useState(true);
   const [notifications, setNotifications] = useState([]);
+  const [markingNotificationsRead, setMarkingNotificationsRead] = useState(false);
+  const [respondingOfferId, setRespondingOfferId] = useState(null);
   
   // All State Problems
   const [allProblems, setAllProblems] = useState([]);
@@ -96,21 +100,20 @@ export default function UniversityPortal() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedDomainFilter, setSelectedDomainFilter] = useState('all');
   
-  // Problem Details Modal State
+  // Problem / Proposal Details Modal State
   const [selectedProblemIdForModal, setSelectedProblemIdForModal] = useState(null);
+  const [selectedProposalForModal, setSelectedProposalForModal] = useState(null);
 
   // University Registration / Edit Form State
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [submittingRegister, setSubmittingRegister] = useState(false);
+  const [submittingUpdate, setSubmittingUpdate] = useState(false);
   const [univForm, setUnivForm] = useState({
     name: '',
-    shortName: '',
     city: '',
     district: '',
     type: 'State University',
     availableDomains: [],
-    academicDisciplines: '',
-    researchCentres: '',
-    facultyCount: '',
     contactEmail: authUser?.email || ''
   });
 
@@ -128,6 +131,7 @@ export default function UniversityPortal() {
     studentTeam: '',
     projectDuration: '6 Months',
     estimatedBudget: '',
+    peopleImpacted: '',
     industrySupportRequired: []
   });
 
@@ -153,14 +157,10 @@ export default function UniversityPortal() {
         setMyUniversity(res.university);
         setUnivForm({
           name: res.university.name || '',
-          shortName: res.university.shortName || '',
           city: res.university.location?.city || 'Ranchi',
           district: res.university.location?.district || 'Ranchi',
           type: res.university.type || 'State University',
           availableDomains: res.university.availableDomains || ['Water Resources', 'Agriculture'],
-          academicDisciplines: (res.university.academicDisciplines || []).join(', '),
-          researchCentres: (res.university.researchCentres || []).join(', '),
-          facultyCount: res.university.facultyCount || 85,
           contactEmail: res.university.contactEmail || authUser?.email || ''
         });
       } else {
@@ -201,15 +201,12 @@ export default function UniversityPortal() {
     }
 
     try {
+      setSubmittingRegister(true);
       const payload = {
         name: univForm.name,
-        shortName: univForm.shortName || univForm.name,
         location: { city: univForm.city, district: univForm.district, state: 'Jharkhand' },
         type: univForm.type,
         availableDomains: univForm.availableDomains,
-        academicDisciplines: univForm.academicDisciplines.split(',').map(s => s.trim()).filter(Boolean),
-        researchCentres: univForm.researchCentres.split(',').map(s => s.trim()).filter(Boolean),
-        facultyCount: Number(univForm.facultyCount) || 50,
         contactEmail: univForm.contactEmail
       };
 
@@ -219,6 +216,8 @@ export default function UniversityPortal() {
       loadUniversityData();
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to register university');
+    } finally {
+      setSubmittingRegister(false);
     }
   };
 
@@ -226,15 +225,12 @@ export default function UniversityPortal() {
   const handleUpdateUniversity = async (e) => {
     e.preventDefault();
     try {
+      setSubmittingUpdate(true);
       const payload = {
         name: univForm.name,
-        shortName: univForm.shortName || univForm.name,
         location: { city: univForm.city, district: univForm.district, state: 'Jharkhand' },
         type: univForm.type,
         availableDomains: univForm.availableDomains,
-        academicDisciplines: univForm.academicDisciplines.split(',').map(s => s.trim()).filter(Boolean),
-        researchCentres: univForm.researchCentres.split(',').map(s => s.trim()).filter(Boolean),
-        facultyCount: Number(univForm.facultyCount) || 50,
         contactEmail: univForm.contactEmail
       };
 
@@ -244,6 +240,8 @@ export default function UniversityPortal() {
       toast.success('University profile and domain focus updated!');
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to update university details');
+    } finally {
+      setSubmittingUpdate(false);
     }
   };
 
@@ -463,6 +461,8 @@ export default function UniversityPortal() {
                   <option value="Central University">Central University</option>
                   <option value="Autonomous College">Autonomous College</option>
                   <option value="Agricultural University">Agricultural University</option>
+                  <option value="Medical Institution">Medical Institution</option>
+                  <option value="Others">Others</option>
                 </select>
               </div>
             </div>
@@ -497,35 +497,30 @@ export default function UniversityPortal() {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div>
-                <label className="block font-bold text-slate-700 mb-1">Academic Disciplines (Comma separated)</label>
-                <input
-                  type="text"
-                  placeholder="e.g. Computer Science, IoT, Environmental Engineering"
-                  value={univForm.academicDisciplines}
-                  onChange={(e) => setUnivForm({ ...univForm, academicDisciplines: e.target.value })}
-                  className="w-full p-2.5 border border-slate-200 text-slate-900 bg-slate-50 font-medium rounded-xl focus:outline-none"
-                />
-              </div>
-
-              <div>
-                <label className="block font-bold text-slate-700 mb-1">Official Contact Email</label>
-                <input
-                  type="email"
-                  value={univForm.contactEmail}
-                  onChange={(e) => setUnivForm({ ...univForm, contactEmail: e.target.value })}
-                  className="w-full p-2.5 border border-slate-200 text-slate-900 bg-slate-50 font-medium rounded-xl focus:outline-none"
-                />
-              </div>
+            <div>
+              <label className="block font-bold text-slate-700 mb-1">Official Contact Email</label>
+              <input
+                type="email"
+                value={univForm.contactEmail}
+                onChange={(e) => setUnivForm({ ...univForm, contactEmail: e.target.value })}
+                className="w-full p-2.5 border border-slate-200 text-slate-900 bg-slate-50 font-medium rounded-xl focus:outline-none"
+              />
             </div>
 
             <div className="pt-4 border-t border-slate-100 flex justify-end">
               <button
                 type="submit"
-                className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs sm:text-sm px-8 py-3 rounded-2xl shadow-md shadow-emerald-600/20 cursor-pointer transition-all hover:scale-105"
+                disabled={submittingRegister}
+                className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs sm:text-sm px-8 py-3 rounded-2xl shadow-md shadow-emerald-600/20 cursor-pointer transition-all hover:scale-105 flex items-center space-x-2 disabled:opacity-60 disabled:cursor-not-allowed"
               >
-                Register University &amp; Enter Portal &rarr;
+                {submittingRegister ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>Registering...</span>
+                  </>
+                ) : (
+                  <span>Register University &amp; Enter Portal &rarr;</span>
+                )}
               </button>
             </div>
           </form>
@@ -537,11 +532,14 @@ export default function UniversityPortal() {
   // Handle responding to Industry Offer
   const handleRespondToOffer = async (proposalId, action) => {
     try {
+      setRespondingOfferId(proposalId);
       const res = await universityApi.respondToIndustryOffer(proposalId, { action });
       toast.success(res.message || (action === 'accept' ? 'Industry CSR offer accepted! Forwarded to Government.' : 'Industry offer declined'));
       loadUniversityData();
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to respond to offer');
+    } finally {
+      setRespondingOfferId(null);
     }
   };
 
@@ -740,16 +738,27 @@ export default function UniversityPortal() {
                   <div className="pt-3 border-t border-slate-100 flex items-center justify-end space-x-2">
                     <button
                       onClick={() => handleRespondToOffer(p._id, 'reject')}
-                      className="px-3.5 py-2 text-xs font-bold text-slate-600 hover:text-rose-700 hover:bg-rose-50 rounded-xl border border-slate-200 cursor-pointer transition-all"
+                      disabled={respondingOfferId === p._id}
+                      className="px-3.5 py-2 text-xs font-bold text-slate-600 hover:text-rose-700 hover:bg-rose-50 rounded-xl border border-slate-200 cursor-pointer transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       Decline Offer
                     </button>
                     <button
                       onClick={() => handleRespondToOffer(p._id, 'accept')}
-                      className="px-4 py-2 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl shadow-md shadow-emerald-600/20 cursor-pointer flex items-center space-x-1.5 transition-all hover:scale-105"
+                      disabled={respondingOfferId === p._id}
+                      className="px-4 py-2 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl shadow-md shadow-emerald-600/20 cursor-pointer flex items-center space-x-1.5 transition-all hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      <CheckCircle2 className="w-3.5 h-3.5" />
-                      <span>Accept Offer &amp; Forward to Govt</span>
+                      {respondingOfferId === p._id ? (
+                        <>
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          <span>Processing...</span>
+                        </>
+                      ) : (
+                        <>
+                          <CheckCircle2 className="w-3.5 h-3.5" />
+                          <span>Accept Offer &amp; Forward to Govt</span>
+                        </>
+                      )}
                     </button>
                   </div>
                 </div>
@@ -1011,13 +1020,27 @@ export default function UniversityPortal() {
 
                       {/* Card Action */}
                       <div className="pt-4 border-t border-slate-100 flex items-center justify-between gap-2 flex-wrap">
-                        <button
-                          onClick={() => setSelectedProblemIdForModal(problem._id || problem.ticketId)}
-                          className="bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold px-3.5 py-2 rounded-xl border border-slate-200 flex items-center space-x-1.5 cursor-pointer transition-all hover:scale-105 shadow-sm"
-                        >
-                          <Eye className="w-3.5 h-3.5 text-slate-600" />
-                          <span>Inspect Problem &amp; Timeline</span>
-                        </button>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => setSelectedProblemIdForModal(problem._id)}
+                            className="bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold px-3 py-2 rounded-xl border border-slate-200 flex items-center space-x-1.5 cursor-pointer transition-all hover:scale-105 shadow-sm"
+                            title="Inspect societal problem statement, ground evidence & photos"
+                          >
+                            <Eye className="w-3.5 h-3.5 text-slate-500" />
+                            <span>Problem Details</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => setSelectedProposalForModal(prop)}
+                            className="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-bold px-3.5 py-2 rounded-xl border border-indigo-200 flex items-center space-x-1.5 cursor-pointer transition-all hover:scale-105 shadow-sm"
+                            title="Inspect proposal details, budget, timeline and industry sponsor"
+                          >
+                            <FileText className="w-3.5 h-3.5 text-indigo-600" />
+                            <span>Check Proposal</span>
+                          </button>
+                        </div>
 
                         {prop.status === 'completed' || problem.resolutionStatus === 'solved' ? (
                           <div className="inline-flex items-center space-x-1.5 px-4 py-2 rounded-xl bg-emerald-100 text-emerald-900 text-xs font-bold border border-emerald-300 shadow-sm">
@@ -1230,13 +1253,21 @@ export default function UniversityPortal() {
                   />
                 </div>
                 <div>
-                  <label className="block font-bold text-slate-700 mb-1">Short Name</label>
-                  <input
-                    type="text"
-                    value={univForm.shortName}
-                    onChange={(e) => setUnivForm({ ...univForm, shortName: e.target.value })}
+                  <label className="block font-bold text-slate-700 mb-1">Institution Type</label>
+                  <select
+                    value={univForm.type}
+                    onChange={(e) => setUnivForm({ ...univForm, type: e.target.value })}
                     className="w-full p-2.5 border border-slate-200 text-slate-900 bg-slate-50 font-medium rounded-xl focus:outline-none"
-                  />
+                  >
+                    <option value="Institute of National Importance">Institute of National Importance</option>
+                    <option value="Deemed University & Tech Hub">Deemed University &amp; Tech Hub</option>
+                    <option value="State University">State University</option>
+                    <option value="Central University">Central University</option>
+                    <option value="Autonomous College">Autonomous College</option>
+                    <option value="Agricultural University">Agricultural University</option>
+                    <option value="Medical Institution">Medical Institution</option>
+                    <option value="Others">Others</option>
+                  </select>
                 </div>
               </div>
 
@@ -1275,9 +1306,17 @@ export default function UniversityPortal() {
                 </button>
                 <button
                   type="submit"
-                  className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-6 py-2.5 rounded-xl shadow-md cursor-pointer"
+                  disabled={submittingUpdate}
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-6 py-2.5 rounded-xl shadow-md cursor-pointer flex items-center space-x-2 disabled:opacity-60 disabled:cursor-not-allowed"
                 >
-                  Save Changes
+                  {submittingUpdate ? (
+                    <>
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      <span>Saving Changes...</span>
+                    </>
+                  ) : (
+                    <span>Save Changes</span>
+                  )}
                 </button>
               </div>
             </form>
@@ -1517,6 +1556,18 @@ export default function UniversityPortal() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Proposal Details Modal */}
+      {selectedProposalForModal && (
+        <ProposalDetailsModal
+          proposal={selectedProposalForModal}
+          isOpen={Boolean(selectedProposalForModal)}
+          onClose={() => setSelectedProposalForModal(null)}
+          onViewProblem={(probId) => {
+            setSelectedProblemIdForModal(probId);
+          }}
+        />
       )}
 
       {/* Problem Details Modal */}

@@ -17,32 +17,14 @@ export const CANONICAL_DOMAINS = [
   'Others'
 ];
 
-const apiKey = process.env.AI_API_KEY || process.env.GEMINI_API_KEY || '';
-const configuredModelName = process.env.AI_MODEL || process.env.GEMINI_MODEL || 'gemini-2.0-flash';
-
-let genAI = null;
-if (apiKey) {
-  try {
-    genAI = new GoogleGenerativeAI(apiKey);
-  } catch (err) {
-    console.warn('[AI Init Warning]:', err.message);
-  }
-}
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+const configuredModelName = process.env.GEMINI_MODEL;
 
 /**
  * Helper to get generative model
  */
 const getGenerativeModel = () => {
-  if (!genAI) return null;
-  try {
-    return genAI.getGenerativeModel({ model: configuredModelName });
-  } catch (e) {
-    try {
-      return genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
-    } catch {
-      return genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
-    }
-  }
+  return genAI.getGenerativeModel({ model: configuredModelName });
 };
 
 /**
@@ -167,7 +149,7 @@ export const checkProblemDuplicateInLocation = async (newProblem, existingProble
     }
 
     const existingProblemsListFormatted = existingProblemsInLocation.map((p, index) => 
-      `Problem ${index + 1} [Ticket: ${p.ticketId || p._id}]: Title: "${p.title}", Description: "${p.description?.slice(0, 200)}"`
+      `Problem ${index + 1} [ID: ${p._id}]: Title: "${p.title}", Description: "${p.description?.slice(0, 200)}"`
     ).join('\n');
 
     const prompt = `
@@ -188,7 +170,7 @@ If it is reporting the same issue, isDuplicate is true.
 Return ONLY a valid JSON object with NO markdown ticks:
 {
   "isDuplicate": true or false,
-  "matchedTicketId": "Ticket ID of matched problem if duplicate, otherwise empty string",
+  "matchedProblemId": "Problem ID of matched problem if duplicate, otherwise empty string",
   "reason": "Short 1-sentence explanation"
 }
 `;
@@ -200,7 +182,7 @@ Return ONLY a valid JSON object with NO markdown ticks:
 
     return {
       isDuplicate: Boolean(parsed.isDuplicate),
-      matchedTicketId: parsed.matchedTicketId || (parsed.isDuplicate ? existingProblemsInLocation[0]?.ticketId : ''),
+      matchedProblemId: parsed.matchedProblemId || parsed.matchedTicketId || (parsed.isDuplicate ? existingProblemsInLocation[0]?._id : ''),
       explanation: parsed.reason || 'Duplicate problem detected in this locality.'
     };
   } catch (err) {
@@ -227,13 +209,13 @@ const fallbackDuplicateCheck = (newProblem, existingProblems) => {
     if (ratio > 0.75) {
       return {
         isDuplicate: true,
-        matchedTicketId: existing.ticketId || existing._id,
-        explanation: `Substantially similar problem statement already active in this locality under #${existing.ticketId}`
+        matchedProblemId: existing._id,
+        explanation: `Substantially similar problem statement already active in this locality`
       };
     }
   }
 
-  return { isDuplicate: false, matchedTicketId: '', explanation: 'No duplicate found in this locality' };
+  return { isDuplicate: false, matchedProblemId: '', explanation: 'No duplicate found in this locality' };
 };
 
 /**

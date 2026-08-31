@@ -11,9 +11,10 @@ export const problemApi = {
     return res.data;
   },
 
-  // Fetch single problem by ID or Ticket ID
+  // Fetch single problem by ID
   getProblemById: async (id) => {
-    const res = await apiClient.get(`/problems/${id}`);
+    const cleanId = typeof id === 'object' && id !== null ? (id._id || id.id) : id;
+    const res = await apiClient.get(`/problems/${cleanId}`);
     return res.data;
   },
 

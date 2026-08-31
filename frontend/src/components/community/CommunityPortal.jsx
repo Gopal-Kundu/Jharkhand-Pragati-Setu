@@ -81,7 +81,8 @@ const DOMAINS = [
   'Urban Development',
   'Accessibility',
   'Public Administration',
-  'Rural Livelihoods'
+  'Rural Livelihoods',
+  'Others'
 ];
 
 const DOMAIN_ICONS = {
@@ -94,7 +95,8 @@ const DOMAIN_ICONS = {
   'Urban Development': Building,
   'Accessibility': Eye,
   'Public Administration': FileCheck,
-  'Rural Livelihoods': Footprints
+  'Rural Livelihoods': Footprints,
+  'Others': Layers
 };
 
 
@@ -274,7 +276,6 @@ export default function CommunityPortal() {
       }
 
       const newProblem = res.problem || res;
-      const newTicketId = newProblem.ticketId || 'JH-SOC-1042';
       const decidedDomain = newProblem.domain || 'Innovation Intervention';
 
       toast.success(`Problem reported!`);
@@ -660,7 +661,7 @@ export default function CommunityPortal() {
         ) : myProblems.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {myProblems.map((p) => {
-              const ticket = p.ticketId || p.id;
+              const problemId = p._id || p.id;
               const isSolved = p.resolutionStatus === 'solved' || p.status === 'validated';
               const isInProgress = p.status === 'in_progress' || p.status === 'allocated' || p.status === 'funded';
               const Icon = DOMAIN_ICONS[p.domain] || Droplets;
@@ -668,8 +669,8 @@ export default function CommunityPortal() {
 
               return (
                 <div
-                  key={ticket}
-                  onClick={() => setSelectedProblemId(ticket)}
+                  key={problemId}
+                  onClick={() => setSelectedProblemId(problemId)}
                   className="bg-white border border-slate-200 rounded-3xl overflow-hidden shadow-sm hover:border-emerald-500/60 hover:shadow-xl transition-all cursor-pointer flex flex-col justify-between group hover:-translate-y-1"
                 >
                   {/* Evidence Photo Banner or Domain Header */}
@@ -753,7 +754,7 @@ export default function CommunityPortal() {
                               ? 'bg-indigo-100 text-indigo-800' 
                               : 'bg-amber-100 text-amber-800'
                         }`}>
-                          {isSolved ? '✓ Solved & Field Deployed' : isInProgress ? '🔬 University R&D In Progress' : '🤖 Under AI Triage & Review'}
+                          {isSolved ? '✓ Solved & Field Deployed' : isInProgress ? '🔬 University R&D In Progress' : 'Under Review'}
                         </span>
                       </div>
 

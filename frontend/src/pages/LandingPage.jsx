@@ -134,13 +134,13 @@ export default function LandingPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {displayList.map((p) => {
             const domainKey = p.domain || p.primaryDomain || 'Water Resources';
-            const ticket = p.ticketId || p.id;
+            const problemId = p._id || p.id;
             const imageUrl = p.evidence?.[0]?.url || p.evidenceUrl || '';
 
             return (
               <div
-                key={ticket}
-                onClick={() => handleOpenProblem(ticket)}
+                key={problemId}
+                onClick={() => handleOpenProblem(problemId)}
                 className="group rounded-3xl bg-white border border-slate-200 shadow-sm hover:border-emerald-500/60 hover:shadow-xl hover:shadow-emerald-500/10 transition-all cursor-pointer flex flex-col justify-between overflow-hidden hover:-translate-y-1"
               >
                 {/* 1. Problem Image with Location Overlay or Domain Banner */}
@@ -169,7 +169,7 @@ export default function LandingPage() {
                         {domainKey}
                       </span>
                       <span className="text-[10px] font-bold text-slate-300 bg-black/40 px-2 py-0.5 rounded-lg">
-                        #{ticket}
+                        #{problemId?.slice(-6)}
                       </span>
                     </div>
                     <div className="flex items-center space-x-1.5 text-slate-300 text-xs font-medium">

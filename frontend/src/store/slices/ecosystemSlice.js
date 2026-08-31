@@ -156,7 +156,7 @@ export const ecosystemSlice = createSlice({
           }
         }
         if (!state.selectedProblemId && state.problems.length > 0) {
-          state.selectedProblemId = state.problems[0].ticketId || state.problems[0]._id;
+          state.selectedProblemId = state.problems[0]._id;
         }
         state.loading = false;
       })
@@ -173,7 +173,7 @@ export const ecosystemSlice = createSlice({
       .addCase(fetchSolvedChallenges.fulfilled, (state, action) => {
         state.problems = action.payload || [];
         if (!state.selectedProblemId && action.payload.length > 0) {
-          state.selectedProblemId = action.payload[0].ticketId || action.payload[0]._id;
+          state.selectedProblemId = action.payload[0]._id;
         }
         state.loading = false;
       })
@@ -186,14 +186,14 @@ export const ecosystemSlice = createSlice({
     const updateProblemInState = (state, updatedProblem) => {
       if (!updatedProblem) return;
       const index = state.problems.findIndex(
-        p => p._id === updatedProblem._id || p.ticketId === updatedProblem.ticketId || p.id === updatedProblem.ticketId
+        p => p._id === updatedProblem._id
       );
       if (index !== -1) {
         state.problems[index] = updatedProblem;
       } else {
         state.problems.unshift(updatedProblem);
       }
-      state.selectedProblemId = updatedProblem.ticketId || updatedProblem._id;
+      state.selectedProblemId = updatedProblem._id;
     };
 
     builder

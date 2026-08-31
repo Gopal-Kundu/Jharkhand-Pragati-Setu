@@ -33,7 +33,7 @@ export default function PanchayatPortal() {
     } catch {}
   };
 
-  const torpaCluster = (problemClusters || []).find(c => c?.id === 'JH-WTR-1042' || c?.ticketId === 'JH-WTR-1042') || (problemClusters && problemClusters[0]) || {};
+  const torpaCluster = (problemClusters || []).find(c => c?._id === '6a8f979344a88f09289b5633' || c?.domain === 'Water Resources') || (problemClusters && problemClusters[0]) || {};
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 animate-in fade-in">

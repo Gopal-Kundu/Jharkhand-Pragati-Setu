@@ -8,82 +8,39 @@
 
 export const MASTER_HEI_CATALOG = [
   {
-    institutionId: 'bit_mesra',
     name: 'Birla Institute of Technology (BIT) Mesra',
-    shortName: 'BIT Mesra',
-    nirfRank: 48,
-    location: { district: 'Ranchi', state: 'Jharkhand', lat: 23.4123, lng: 85.4399 },
-    academicDisciplines: ['Civil & Environmental Engineering', 'IoT & Embedded Systems', 'Biotechnology', 'Remote Sensing & GIS', 'Computer Science & AI', 'Mechanical Engineering'],
-    researchCenters: [
-      { name: 'Centre of Excellence in Water Technologies & Hydro-Informatics', focus: 'Fluoride Adsorption, IoT Water Quality Sensors, Smart Sluice Automation' },
-      { name: 'Tribal Technology Innovation & Rural Livelihood Cell', focus: 'Low-cost solar processing for Mahua, Lac & Minor Forest Produce' }
-    ],
-    incubationFacilities: ['BIT-TBI Incubation Center (DST Supported)', 'Makerspace IoT Hardware Lab', 'Biotech Rapid Prototyping Facility'],
-    facultySpecializations: [
-      { name: 'Dr. Amitava Roy', department: 'Civil & Environmental Engineering', designation: 'Professor & Head', expertise: ['Water Quality Modelling', 'Heavy Metal & Fluoride Remediation', 'IoT Hydro-Telemetry'], activeProjects: 3 },
-      { name: 'Dr. Priya Sengupta', department: 'Bio-Engineering & Biotechnology', designation: 'Associate Professor', expertise: ['Bio-Sensors', 'Tribal Nutrition', 'Phyto-Remediation'], activeProjects: 2 }
-    ]
+    type: 'Deemed University & Tech Hub',
+    location: { city: 'Ranchi', district: 'Ranchi', state: 'Jharkhand' },
+    availableDomains: ['Water Resources', 'Agriculture', 'Energy', 'Urban Development', 'Others'],
+    contactEmail: 'innovation@bitmesra.ac.in'
   },
   {
-    institutionId: 'iit_ism_dhanbad',
     name: 'Indian Institute of Technology (ISM) Dhanbad',
-    shortName: 'IIT (ISM) Dhanbad',
-    nirfRank: 17,
-    location: { district: 'Dhanbad', state: 'Jharkhand', lat: 23.8144, lng: 86.4412 },
-    academicDisciplines: ['Mining & Geo-Engineering', 'Environmental Science', 'Electronics Engineering', 'Applied Geophysics', 'Clean Energy Technologies'],
-    researchCenters: [
-      { name: 'Centre of Mining Fire & Hazard Mitigation Technologies', focus: 'Thermal InSAR satellite surveillance, IoT underground gas & temperature tomography' },
-      { name: 'Sustainable Mineral & Geo-Resource Hub', focus: 'Circular economy fly-ash and slag utilization in road construction' }
-    ],
-    incubationFacilities: ['IIT ISM Technology Innovation Hub (TEXMiN)', 'Centre for Innovation, Incubation & Entrepreneurship (CIIE)'],
-    facultySpecializations: [
-      { name: 'Prof. Rajesh K. Sinha', department: 'Mining Engineering', designation: 'Professor', expertise: ['Underground Coal Fire Dynamics', 'Thermal Infrared Sensor Arrays', 'Mine Safety'], activeProjects: 4 }
-    ]
+    type: 'Institute of National Importance',
+    location: { city: 'Dhanbad', district: 'Dhanbad', state: 'Jharkhand' },
+    availableDomains: ['Energy', 'Environment', 'Water Resources', 'Others'],
+    contactEmail: 'rd@iitism.ac.in'
   },
   {
-    institutionId: 'bau_ranchi',
     name: 'Birsa Agricultural University (BAU) Kanke',
-    shortName: 'BAU Ranchi',
-    nirfRank: 92,
-    location: { district: 'Ranchi', state: 'Jharkhand', lat: 23.4357, lng: 85.3211 },
-    academicDisciplines: ['Agronomy & Crop Sciences', 'Forestry & Agro-Forestry', 'Soil Science & Agricultural Chemistry', 'Plant Pathology & Pest Forensics'],
-    researchCenters: [
-      { name: 'Centre of Tribal Crop Resilience & Lac Culture', focus: 'Drought-tolerant finger millet, lac insect pest forensics, micro-irrigation' }
-    ],
-    incubationFacilities: ['BAU Agribusiness Incubator (R-ABI)', 'Seed Testing & Soil Chemistry Lab'],
-    facultySpecializations: [
-      { name: 'Dr. Sunita Murmu', department: 'Plant Pathology & Agronomy', designation: 'Associate Professor', expertise: ['Lac Production Optimization', 'Soil Nutrient Profiling', 'Tribal Agro-Ecosystems'], activeProjects: 3 }
-    ]
+    type: 'Agricultural University',
+    location: { city: 'Ranchi', district: 'Ranchi', state: 'Jharkhand' },
+    availableDomains: ['Agriculture', 'Rural Livelihoods', 'Environment', 'Others'],
+    contactEmail: 'innovation@bauranchi.org'
   },
   {
-    institutionId: 'nit_jamshedpur',
     name: 'National Institute of Technology (NIT) Jamshedpur',
-    shortName: 'NIT Jamshedpur',
-    nirfRank: 86,
-    location: { district: 'East Singhbhum', state: 'Jharkhand', lat: 22.7758, lng: 86.1437 },
-    academicDisciplines: ['Metallurgical & Materials Engineering', 'Mechanical & Thermal Systems', 'Electrical & Renewable Microgrids', 'Production Engineering'],
-    researchCenters: [
-      { name: 'Appropriate Rural Machinery & Industrial Metallurgy Lab', focus: 'Solar biomass hybrid cold storage, mechanized lac peeling, microgrid DC converters' }
-    ],
-    incubationFacilities: ['NIT Incubation and Innovation Centre (NIIC)', 'Advanced Metal Fab & Prototyping Workshop'],
-    facultySpecializations: [
-      { name: 'Dr. Vivek Pandey', department: 'Mechanical & Materials Engineering', designation: 'Associate Professor', expertise: ['Low-Cost Agricultural Machinery', 'Solar Thermal Systems'], activeProjects: 2 }
-    ]
+    type: 'Institute of National Importance',
+    location: { city: 'Jamshedpur', district: 'East Singhbhum', state: 'Jharkhand' },
+    availableDomains: ['Energy', 'Urban Development', 'Accessibility', 'Others'],
+    contactEmail: 'tbi@nitjsr.ac.in'
   },
   {
-    institutionId: 'rims_ranchi',
     name: 'Rajendra Institute of Medical Sciences (RIMS) Ranchi',
-    shortName: 'RIMS Ranchi',
-    nirfRank: 65,
-    location: { district: 'Ranchi', state: 'Jharkhand', lat: 23.3855, lng: 85.3562 },
-    academicDisciplines: ['Community Medicine', 'Tele-Medicine & Digital Health', 'Pathology & Point-of-Care Diagnostics', 'Pediatrics & Maternal Health'],
-    researchCenters: [
-      { name: 'Centre for Tribal Health, Sickle Cell & Anemia Forensics', focus: 'Paper microfluidic blood test strips, drone emergency medical courier routing' }
-    ],
-    incubationFacilities: ['RIMS MedTech Innovation Hub', 'Molecular Diagnostic Laboratory'],
-    facultySpecializations: [
-      { name: 'Dr. Sanjay Kumar', department: 'Community Medicine', designation: 'Professor', expertise: ['Tribal Public Health', 'Mobile Health & Tele-Diagnostics', 'Epidemiology'], activeProjects: 2 }
-    ]
+    type: 'Medical Institution',
+    location: { city: 'Ranchi', district: 'Ranchi', state: 'Jharkhand' },
+    availableDomains: ['Healthcare', 'Accessibility', 'Public Administration', 'Others'],
+    contactEmail: 'telehealth@rimsranchi.ac.in'
   }
 ];
 

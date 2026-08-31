@@ -199,11 +199,11 @@ export const getDomainProposalsForIndustry = async (req, res) => {
     const proposals = await Proposal.find()
       .populate({
         path: 'problem',
-        select: 'ticketId title description domain location evidence status resolutionStatus priority createdAt submitter'
+        select: 'title description domain location evidence status resolutionStatus priority createdAt submitter'
       })
       .populate({
         path: 'university',
-        select: 'name shortName location type contactEmail availableDomains academicDisciplines'
+        select: 'name location type contactEmail availableDomains'
       })
       .populate({
         path: 'industryOffer.industry',
@@ -295,14 +295,22 @@ export const makeProposalOffer = async (req, res) => {
       }
       await proposal.save();
 
-      // Log to problem timeline
+      // Log to problem auditHistory
       if (proposal.problem) {
-        await pushProblemTimeline(
-          proposal.problem._id || proposal.problem,
-          'Proposal Co-Sponsorship Declined',
-          `${industry.name} evaluated research proposal '${proposal.title}' and declined support. Reason: ${rejectionReason || 'Declined by industry sponsor'}`,
-          'amber'
-        );
+        await Problem.findByIdAndUpdate(proposal.problem._id || proposal.problem, {
+          $push: {
+            auditHistory: {
+              $each: [{
+                timestamp: new Date(),
+                officer: industry.name,
+                role: 'industry',
+                action: 'Proposal Co-Sponsorship Declined',
+                note: `${industry.name} evaluated research proposal '${proposal.title}' and declined support. Reason: ${rejectionReason || 'Declined by industry sponsor'}`
+              }],
+              $position: 0
+            }
+          }
+        });
       }
 
       return res.status(200).json({
@@ -341,9 +349,7 @@ export const makeProposalOffer = async (req, res) => {
       await Problem.findByIdAndUpdate(problemTargetId, {
         peopleImpacted: Number(peopleImpacted),
         'socialImpact.beneficiariesReached': Number(peopleImpacted),
-        'socialImpact.metricValue': Number(peopleImpacted).toLocaleString(),
-        'impactMetrics.metricValue': Number(peopleImpacted).toLocaleString(),
-        'impactMetrics.metricName': 'Lives Impacted'
+        'socialImpact.metricValue': Number(peopleImpacted).toLocaleString()
       });
     }
 
@@ -378,7 +384,7 @@ export const makeProposalOffer = async (req, res) => {
       });
     }
 
-    // Append to Problem Timeline with Industry name & formatted date
+    // Append to Problem Audit History
     if (proposal.problem) {
       const problemTargetId = proposal.problem._id || proposal.problem;
       const dateFormatted = new Date().toLocaleDateString('en-IN', {
@@ -387,12 +393,20 @@ export const makeProposalOffer = async (req, res) => {
         year: 'numeric'
       });
 
-      await pushProblemTimeline(
-        problemTargetId,
-        `${industry.name} accepted & sponsored Proposal`,
-        `${industry.name} accepted proposal '${proposal.title}' and committed a CSR grant of ₹${Number(offerPayload.fundingAmount).toLocaleString()} on ${dateFormatted}.`,
-        'purple'
-      );
+      await Problem.findByIdAndUpdate(problemTargetId, {
+        $push: {
+          auditHistory: {
+            $each: [{
+              timestamp: new Date(),
+              officer: industry.name,
+              role: 'industry',
+              action: `${industry.name} accepted & sponsored Proposal`,
+              note: `${industry.name} accepted proposal '${proposal.title}' and committed a CSR grant of ₹${Number(offerPayload.fundingAmount).toLocaleString()} on ${dateFormatted}.`
+            }],
+            $position: 0
+          }
+        }
+      });
     }
 
     return res.status(200).json({

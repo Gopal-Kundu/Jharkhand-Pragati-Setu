@@ -58,7 +58,7 @@ const proposalSchema = new mongoose.Schema(
     },
     peopleImpacted: {
       type: Number,
-      default: 0
+      default: 1000
     },
     industrySupportRequired: [
       {
@@ -84,11 +84,6 @@ const proposalSchema = new mongoose.Schema(
       default: 'Water Resources'
     },
     assignedIndustry: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'IndustryPartner',
-      default: null
-    },
-    aiMatchedIndustry: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'IndustryPartner',
       default: null
@@ -130,11 +125,6 @@ const proposalSchema = new mongoose.Schema(
         'completed'
       ],
       default: 'submitted'
-    },
-    aiAnalysis: {
-      matchedRationale: { type: String, default: '' },
-      confidence: { type: Number, default: 0.92 },
-      suggestedFundingRange: { type: String, default: '₹5,00,000 - ₹12,00,000' }
     }
   },
   {

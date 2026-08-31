@@ -37,7 +37,7 @@ const sendTokenCookie = (res, userId) => {
  */
 export const register = async (req, res) => {
   try {
-    const { name, email, password, role, organization, department, district, state, phone } = req.body;
+    const { name, email, password, role, organization, district, state, phone } = req.body;
 
     if (!name || !email || !password) {
       return res.status(400).json({
@@ -66,7 +66,6 @@ export const register = async (req, res) => {
       password: hashedPassword,
       role: role || 'citizen',
       organization: organization || 'General Citizen Body',
-      department: department || '',
       district: district || 'Ranchi',
       state: state || 'Jharkhand',
       phone: phone || ''
@@ -84,10 +83,8 @@ export const register = async (req, res) => {
         email: user.email,
         role: user.role,
         organization: user.organization,
-        department: user.department,
         district: user.district,
-        state: user.state,
-        avatar: user.avatar
+        state: user.state
       }
     });
   } catch (error) {
@@ -145,10 +142,8 @@ export const login = async (req, res) => {
         email: user.email,
         role: user.role,
         organization: user.organization,
-        department: user.department,
         district: user.district,
-        state: user.state,
-        avatar: user.avatar
+        state: user.state
       }
     });
   } catch (error) {

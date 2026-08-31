@@ -33,7 +33,8 @@ export const getAnalytics = async (req, res) => {
       'Urban Development',
       'Accessibility',
       'Public Administration',
-      'Rural Livelihoods'
+      'Rural Livelihoods',
+      'Others'
     ];
     domains.forEach(d => { domainCounts[d] = 0; });
     problems.forEach(p => {
@@ -118,7 +119,7 @@ export const getAnalytics = async (req, res) => {
         districtHotspots: Object.values(districtData),
         statusFunnel,
         recentAuditTrail: problems
-          .flatMap(p => (p.auditHistory || []).map(a => ({ ...a.toObject ? a.toObject() : a, ticketId: p.ticketId, problemTitle: p.title })))
+          .flatMap(p => (p.auditHistory || []).map(a => ({ ...a.toObject ? a.toObject() : a, problemId: p._id, problemTitle: p.title })))
           .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
           .slice(0, 15)
       }

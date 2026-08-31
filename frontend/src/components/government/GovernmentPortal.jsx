@@ -35,7 +35,8 @@ const ALL_DOMAINS = [
   'Urban Development',
   'Accessibility',
   'Public Administration',
-  'Rural Livelihoods'
+  'Rural Livelihoods',
+  'Others'
 ];
 
 

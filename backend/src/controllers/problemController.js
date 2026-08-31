@@ -1,32 +1,12 @@
 import Problem from '../models/Problem.js';
-import { pushProblemTimeline } from './timelineController.js';
 import University from '../models/University.js';
 import User from '../models/User.js';
 import Location from '../models/Location.js';
+import Proposal from '../models/Proposal.js';
+import IndustryPartner from '../models/IndustryPartner.js';
 import { analyzeAndClassifyProblem, checkProblemDuplicateInLocation } from '../ai/aiService.js';
 import { uploadMediaToCloudinary } from '../cloudinary/upload.js';
 import { sendProblemSubmittedEmail, sendUniversityAllocationEmail } from '../email/emailService.js';
-
-/**
- * Helper to generate unique domain-based ticket ID
- */
-const generateTicketId = (domain = 'GEN') => {
-  const map = {
-    'Water Resources': 'WTR',
-    'Agriculture': 'AGR',
-    'Healthcare': 'HLT',
-    'Education': 'EDU',
-    'Environment': 'ENV',
-    'Energy': 'NRG',
-    'Urban Development': 'URB',
-    'Accessibility': 'ACC',
-    'Public Administration': 'PAD',
-    'Rural Livelihoods': 'RLH'
-  };
-  const code = map[domain] || 'SOC';
-  const randomNum = Math.floor(1000 + Math.random() * 9000);
-  return `JH-${code}-${randomNum}`;
-};
 
 /**
  * @desc    Submit a new societal challenge statement (AI domain classification, location deduplication & university matching)
@@ -54,23 +34,24 @@ export const createProblem = async (req, res) => {
     const parsedLocation = typeof location === 'string' ? JSON.parse(location) : (location || { district: 'Ranchi', state: 'Jharkhand' });
     const parsedSubmitter = typeof submitter === 'string' ? JSON.parse(submitter) : (submitter || { name: 'Concerned Citizen', role: 'individual_citizen' });
 
-    // Ensure GPS coordinates are structured for MongoDB Geospatial storage
     const lat = Number(parsedLocation.lat) || 23.3441;
     const lng = Number(parsedLocation.lng) || 85.3096;
-    parsedLocation.lat = lat;
-    parsedLocation.lng = lng;
-    parsedLocation.geoPoint = {
-      type: 'Point',
-      coordinates: [lng, lat]
+
+    const formattedLocation = {
+      district: parsedLocation.district || 'Ranchi',
+      block: parsedLocation.block || '',
+      panchayat: parsedLocation.panchayat || '',
+      state: parsedLocation.state || 'Jharkhand',
+      lat,
+      lng,
+      address: parsedLocation.address || parsedLocation.village || '',
+      pincode: parsedLocation.pincode || ''
     };
 
-    // 2. Locality Deduplication Search (District, Block, Panchayat)
-    const locFilter = { district: new RegExp(`^${parsedLocation.district || 'Ranchi'}$`, 'i') };
-    if (parsedLocation.block) {
-      locFilter.block = new RegExp(`^${parsedLocation.block}$`, 'i');
-    }
-    if (parsedLocation.panchayat) {
-      locFilter.panchayat = new RegExp(`^${parsedLocation.panchayat}$`, 'i');
+    // 2. Locality Deduplication Search (District, Block)
+    const locFilter = { district: new RegExp(`^${formattedLocation.district}$`, 'i') };
+    if (formattedLocation.block) {
+      locFilter.block = new RegExp(`^${formattedLocation.block}$`, 'i');
     }
 
     const existingLocationRecords = await Location.find(locFilter).populate('problem').limit(15);
@@ -80,7 +61,7 @@ export const createProblem = async (req, res) => {
 
     if (existingProblemsInLocality.length > 0) {
       const duplicateResult = await checkProblemDuplicateInLocation(
-        { title, description, location: parsedLocation },
+        { title, description, location: formattedLocation },
         existingProblemsInLocality
       );
 
@@ -89,13 +70,13 @@ export const createProblem = async (req, res) => {
           success: false,
           duplicate: true,
           message: 'Someone from your locality has already submitted this problem.',
-          existingTicketId: duplicateResult.matchedTicketId
+          existingProblemId: duplicateResult.matchedProblemId || duplicateResult.matchedTicketId || null
         });
       }
     }
 
     // 3. AI Autonomous Domain Classification & Problem Analysis
-    const aiAnalysisResult = await analyzeAndClassifyProblem(title, description, parsedLocation);
+    const aiAnalysisResult = await analyzeAndClassifyProblem(title, description, formattedLocation);
     const decidedDomain = aiAnalysisResult.domain || 'Water Resources';
 
     // 4. Upload multimedia evidence files if present via Multer & Cloudinary
@@ -131,40 +112,32 @@ export const createProblem = async (req, res) => {
       });
     }
 
-    const ticketId = generateTicketId(decidedDomain);
+    const formattedSubmitter = {
+      userId: req.user ? req.user._id : (parsedSubmitter.userId || null),
+      name: (req.user && req.user.name) || parsedSubmitter.name || 'Concerned Citizen',
+      role: parsedSubmitter.role || 'individual_citizen',
+      organization: parsedSubmitter.organization || 'Community Resident',
+      email: (req.user && req.user.email) || parsedSubmitter.email || '',
+      phone: (req.user && req.user.phone) || parsedSubmitter.phone || ''
+    };
 
-    if (req.user) {
-      parsedSubmitter.userId = req.user._id;
-      if (!parsedSubmitter.name || parsedSubmitter.name === 'Concerned Citizen') {
-        parsedSubmitter.name = req.user.name;
-      }
-      if (!parsedSubmitter.email) {
-        parsedSubmitter.email = req.user.email;
-      }
-      if (!parsedSubmitter.phone && req.user.phone) {
-        parsedSubmitter.phone = req.user.phone;
-      }
-    }
-
-    // 5. Create Problem Record with AI-decided Domain
+    // 5. Create Problem Record
     const newProblem = new Problem({
-      ticketId,
       title,
       description,
       domain: decidedDomain,
-      location: parsedLocation,
-      user: req.user ? req.user._id : undefined,
-      submitter: parsedSubmitter,
+      location: formattedLocation,
+      submitter: formattedSubmitter,
       evidence: evidenceList,
       status: 'submitted',
       priority: priority || 'Medium',
       auditHistory: [
         {
           timestamp: new Date(),
-          officer: parsedSubmitter.name || 'Citizen / Local Body',
-          role: parsedSubmitter.role || 'citizen',
-          action: 'Problem Statement Registered (AI Domain Decided)',
-          note: `Classified into '${decidedDomain}' by AI with ${evidenceList.length} evidence attachments from ${parsedLocation.district || 'Jharkhand'}`
+          officer: formattedSubmitter.name || 'Citizen / Local Body',
+          role: formattedSubmitter.role || 'citizen',
+          action: 'Problem Statement Registered',
+          note: `Classified into '${decidedDomain}' by AI with ${evidenceList.length} evidence attachments from ${formattedLocation.district || 'Jharkhand'}`
         }
       ]
     });
@@ -175,15 +148,11 @@ export const createProblem = async (req, res) => {
     try {
       await Location.create({
         problem: newProblem._id,
-        district: parsedLocation.district || 'Ranchi',
-        block: parsedLocation.block || '',
-        panchayat: parsedLocation.panchayat || '',
-        state: parsedLocation.state || 'Jharkhand',
-        lat: parsedLocation.lat,
-        lng: parsedLocation.lng,
-        address: parsedLocation.address || '',
-        pincode: parsedLocation.pincode || '',
-        geoPoint: parsedLocation.geoPoint
+        district: formattedLocation.district,
+        block: formattedLocation.block,
+        state: formattedLocation.state,
+        address: formattedLocation.address,
+        pincode: formattedLocation.pincode
       });
     } catch (locErr) {
       console.warn('[Location Save Warning]:', locErr.message);
@@ -192,11 +161,7 @@ export const createProblem = async (req, res) => {
     // 7. University Matching & Notification Dispatch based on availableDomains
     try {
       const matchedUniversities = await University.find({
-        $or: [
-          { availableDomains: decidedDomain },
-          { academicDisciplines: new RegExp(decidedDomain, 'i') },
-          { researchCentres: new RegExp(decidedDomain, 'i') }
-        ]
+        availableDomains: decidedDomain
       });
 
       const universitiesToNotify = matchedUniversities.length > 0
@@ -207,7 +172,7 @@ export const createProblem = async (req, res) => {
         id: newProblem._id,
         schemaName: 'Problem',
         title: `New Challenge Statement Matched (${decidedDomain})`,
-        description: `A new societal problem from ${parsedLocation.district} ('${newProblem.title}') was matched to your university domain capabilities.`,
+        description: `A new societal problem from ${formattedLocation.district} ('${newProblem.title}') was matched to your university domain capabilities.`,
         read: false,
         createdAt: new Date()
       };
@@ -235,7 +200,7 @@ export const createProblem = async (req, res) => {
               $each: [{
                 id: newProblem._id,
                 schemaName: 'Problem',
-                title: `Challenge Logged: ${decidedDomain} (#${ticketId})`,
+                title: `Challenge Logged: ${decidedDomain}`,
                 description: `Your challenge '${title}' was analyzed by AI and classified as '${decidedDomain}'. Sent for University R&D matching.`,
                 read: false,
                 createdAt: new Date()
@@ -250,15 +215,15 @@ export const createProblem = async (req, res) => {
     }
 
     // 9. Trigger confirmation email if email provided
-    if (parsedSubmitter.email) {
-      sendProblemSubmittedEmail(newProblem, parsedSubmitter.email).catch(err =>
+    if (formattedSubmitter.email) {
+      sendProblemSubmittedEmail(newProblem, formattedSubmitter.email).catch(err =>
         console.warn('[Email Warning]:', err.message)
       );
     }
 
     return res.status(201).json({
       success: true,
-      message: `Societal challenge registered successfully with Ticket ID #${ticketId}. AI classified domain: '${decidedDomain}'`,
+      message: `Societal challenge registered successfully. AI classified domain: '${decidedDomain}'`,
       problem: newProblem
     });
   } catch (error) {
@@ -282,7 +247,6 @@ export const getMyProblems = async (req, res) => {
     const userPhone = req.user.phone;
 
     const queryConditions = [
-      { user: userId },
       { 'submitter.userId': userId }
     ];
     if (userEmail) {
@@ -292,7 +256,11 @@ export const getMyProblems = async (req, res) => {
       queryConditions.push({ 'submitter.phone': userPhone });
     }
 
-    const problems = await Problem.find({ $or: queryConditions }).sort({ createdAt: -1 });
+    const problems = await Problem.find({ $or: queryConditions })
+      .populate('allocatedUniversity')
+      .populate('proposals')
+      .populate('industryPartners')
+      .sort({ createdAt: -1 });
 
     return res.status(200).json({
       success: true,
@@ -335,17 +303,25 @@ export const getProblems = async (req, res) => {
       filter.priority = priority;
     }
     if (search) {
-      filter.$or = [
+      const searchConditions = [
         { title: new RegExp(search, 'i') },
         { description: new RegExp(search, 'i') },
-        { ticketId: new RegExp(search, 'i') }
+        { 'location.district': new RegExp(search, 'i') },
+        { 'location.block': new RegExp(search, 'i') }
       ];
+      if (/^[0-9a-fA-F]{24}$/.test(search)) {
+        searchConditions.push({ _id: search });
+      }
+      filter.$or = searchConditions;
     }
 
     const sortOption = sort === 'oldest' || sort === 'asc' ? { createdAt: 1 } : { createdAt: -1 };
 
     const skip = (parseInt(page, 10) - 1) * parseInt(limit, 10);
     const problems = await Problem.find(filter)
+      .populate('allocatedUniversity')
+      .populate('proposals')
+      .populate('industryPartners')
       .sort(sortOption)
       .skip(skip)
       .limit(parseInt(limit, 10));
@@ -370,7 +346,7 @@ export const getProblems = async (req, res) => {
 };
 
 /**
- * @desc    Get a single problem statement by ID or Ticket ID
+ * @desc    Get a single problem statement by ID
  * @route   GET /api/problems/:id
  * @access  Public
  */
@@ -378,9 +354,21 @@ export const getProblemById = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const problem = await Problem.findOne({
-      $or: [{ _id: id.match(/^[0-9a-fA-F]{24}$/) ? id : null }, { ticketId: id }]
-    });
+    if (!/^[0-9a-fA-F]{24}$/.test(id)) {
+      return res.status(400).json({
+        success: false,
+        message: `Invalid problem statement ID '${id}'`
+      });
+    }
+
+    const problem = await Problem.findById(id)
+      .populate('allocatedUniversity')
+      .populate({
+        path: 'proposals',
+        populate: [{ path: 'university' }, { path: 'industryOffer.industry' }, { path: 'assignedIndustry' }]
+      })
+      .populate('proposalGivenUniversity')
+      .populate('industryPartners');
 
     if (!problem) {
       return res.status(404).json({
@@ -412,16 +400,14 @@ export const triageAndAllocate = async (req, res) => {
     const { id } = req.params;
     const { universityId, universityName, facultyLead, note, officerName } = req.body;
 
-    if (!universityId || !universityName) {
+    if (!universityId) {
       return res.status(400).json({
         success: false,
-        message: 'University ID and University Name are required for allocation'
+        message: 'University ID is required for allocation'
       });
     }
 
-    const problem = await Problem.findOne({
-      $or: [{ _id: id.match(/^[0-9a-fA-F]{24}$/) ? id : null }, { ticketId: id }]
-    });
+    const problem = await Problem.findById(id);
 
     if (!problem) {
       return res.status(404).json({
@@ -430,40 +416,37 @@ export const triageAndAllocate = async (req, res) => {
       });
     }
 
+    // Resolve university
+    const university = await University.findById(universityId);
+    const resolvedName = universityName || university?.name || 'Higher Education Institution';
+
     // Update allocation details
     problem.status = 'allocated';
-    problem.allocatedUniversity = {
-      universityId,
-      name: universityName,
-      facultyLead: facultyLead || { name: 'Dr. Faculty Lead', email: 'faculty@institution.ac.in', department: 'Engineering & Innovation' },
-      allocatedAt: new Date(),
-      deadline: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) // 30 days to submit proposal
-    };
+    problem.allocatedUniversity = university ? university._id : universityId;
 
     // Append to audit trail
     problem.auditHistory.unshift({
       timestamp: new Date(),
       officer: officerName || req.user?.name || 'Government Nodal Officer',
       role: 'government',
-      action: `Institutional Allocation to ${universityName}`,
-      note: note || `Routed based on research expertise and faculty specialization in ${problem.domain}`
+      action: `Institutional Allocation to ${resolvedName}`,
+      note: note || `Routed based on research expertise in ${problem.domain}`
     });
 
     await problem.save();
 
     // Trigger email notification to University Lead
-    const university = await University.findOne({ institutionId: universityId });
     if (university?.contactEmail || facultyLead?.email) {
       sendUniversityAllocationEmail(
         problem,
         facultyLead?.email || university?.contactEmail,
-        universityName
+        resolvedName
       ).catch(err => console.warn('[Email Warning]:', err.message));
     }
 
     return res.status(200).json({
       success: true,
-      message: `Problem successfully allocated to ${universityName}`,
+      message: `Problem successfully allocated to ${resolvedName}`,
       problem
     });
   } catch (error) {
@@ -487,23 +470,23 @@ export const submitProposal = async (req, res) => {
       title,
       teamLead,
       facultyAdvisor,
-      multidisciplinaryTeam,
+      facultyMembers = [],
+      teamMembers = [],
       abstract,
+      description,
       timelineMonths = 6,
       estimatedBudget = 500000,
-      techStack = []
+      industrySupportRequired = []
     } = req.body;
 
-    if (!title || !teamLead) {
+    if (!title) {
       return res.status(400).json({
         success: false,
-        message: 'Proposal title and team lead are required'
+        message: 'Proposal title is required'
       });
     }
 
-    const problem = await Problem.findOne({
-      $or: [{ _id: id.match(/^[0-9a-fA-F]{24}$/) ? id : null }, { ticketId: id }]
-    });
+    const problem = await Problem.findById(id);
 
     if (!problem) {
       return res.status(404).json({
@@ -512,25 +495,37 @@ export const submitProposal = async (req, res) => {
       });
     }
 
-    const proposalId = `PROP-${problem.ticketId}-${Date.now().toString().slice(-4)}`;
+    let universityId = req.user?.university || problem.allocatedUniversity;
+    if (!universityId) {
+      const firstUniv = await University.findOne();
+      universityId = firstUniv?._id;
+    }
 
-    const newProposal = {
-      id: proposalId,
+    const newProposal = await Proposal.create({
+      problem: problem._id,
+      university: universityId,
       title,
-      teamLead,
-      facultyAdvisor: facultyAdvisor || problem.allocatedUniversity?.facultyLead?.name || 'Faculty Advisor',
-      multidisciplinaryTeam: multidisciplinaryTeam || [
-        { name: teamLead, role: 'Lead Innovator', department: 'Primary Engineering', institution: problem.allocatedUniversity?.name || 'HEI' }
-      ],
-      abstract: abstract || 'Detailed multidisciplinary R&D and hardware/software prototyping proposal.',
-      timelineMonths: parseInt(timelineMonths, 10),
-      estimatedBudget: parseFloat(estimatedBudget),
-      techStack,
-      submissionDate: new Date(),
-      status: 'approved' // Automatically activated into workflow
-    };
+      description: description || abstract || 'Detailed multidisciplinary R&D proposal.',
+      problemStatement: problem.title,
+      domain: problem.domain,
+      facultyMembers: facultyMembers.length > 0
+        ? facultyMembers
+        : [{ name: facultyAdvisor || req.user?.name || 'Lead PI', designation: 'Professor & Lead PI', department: 'Engineering', email: req.user?.email || '' }],
+      teamMembers: teamMembers.length > 0
+        ? teamMembers
+        : [{ name: teamLead || 'Lead Innovator', rollNo: '', branch: 'Engineering', year: 'Final Year' }],
+      projectDuration: `${timelineMonths} Months`,
+      estimatedBudget: parseFloat(estimatedBudget) || 500000,
+      industrySupportRequired: industrySupportRequired.length > 0 ? industrySupportRequired : ['IoT & Embedded Sensors'],
+      status: 'submitted'
+    });
 
-    problem.proposals.push(newProposal);
+    if (!problem.proposals.includes(newProposal._id)) {
+      problem.proposals.push(newProposal._id);
+    }
+    if (universityId && !problem.proposalGivenUniversity.includes(universityId)) {
+      problem.proposalGivenUniversity.push(universityId);
+    }
     problem.status = 'in_progress';
 
     // Generate standard initial milestones if empty
@@ -545,10 +540,10 @@ export const submitProposal = async (req, res) => {
 
     problem.auditHistory.unshift({
       timestamp: new Date(),
-      officer: teamLead,
+      officer: teamLead || req.user?.name || 'University Lead',
       role: 'university',
       action: `Solution Proposal Submitted (${title})`,
-      note: `Constituted multidisciplinary team of ${newProposal.multidisciplinaryTeam.length} members with ₹${estimatedBudget} budget`
+      note: `Proposal registered with ₹${estimatedBudget} estimated budget`
     });
 
     await problem.save();
@@ -585,9 +580,7 @@ export const pledgeFunding = async (req, res) => {
       });
     }
 
-    const problem = await Problem.findOne({
-      $or: [{ _id: id.match(/^[0-9a-fA-F]{24}$/) ? id : null }, { ticketId: id }]
-    });
+    const problem = await Problem.findById(id);
 
     if (!problem) {
       return res.status(404).json({
@@ -596,25 +589,27 @@ export const pledgeFunding = async (req, res) => {
       });
     }
 
-    const newPartner = {
-      partnerId: partnerId || `IND-${Date.now()}`,
-      name: partnerName,
-      type: partnerType || 'CSR Foundation',
-      grantAmount: parseFloat(grantAmount),
-      status: 'disbursed',
-      pledgedAt: new Date(),
-      mentorAssigned: mentorAssigned || 'Corporate Technical Mentor',
-      csrReference: `CSR-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`
-    };
+    let industryPartnerDoc = null;
+    if (partnerId && /^[0-9a-fA-F]{24}$/.test(partnerId)) {
+      industryPartnerDoc = await IndustryPartner.findById(partnerId);
+    } else if (req.user?.industry) {
+      industryPartnerDoc = await IndustryPartner.findById(req.user.industry);
+    }
 
-    problem.industryPartners.push(newPartner);
+    if (!industryPartnerDoc) {
+      industryPartnerDoc = await IndustryPartner.findOne({ name: new RegExp(`^${partnerName}$`, 'i') });
+    }
+
+    if (industryPartnerDoc && !problem.industryPartners.includes(industryPartnerDoc._id)) {
+      problem.industryPartners.push(industryPartnerDoc._id);
+    }
 
     problem.auditHistory.unshift({
       timestamp: new Date(),
       officer: partnerName,
       role: 'industry',
       action: `CSR Matching Grant ₹${parseFloat(grantAmount).toLocaleString('en-IN')} Disbursed`,
-      note: `Assigned technical mentor: ${newPartner.mentorAssigned}`
+      note: `Assigned technical mentor: ${mentorAssigned || 'Corporate Technical Mentor'}`
     });
 
     await problem.save();
@@ -643,9 +638,7 @@ export const updateMilestone = async (req, res) => {
     const { id, milestoneId } = req.params;
     const { progress, status, deliverableUrl, note } = req.body;
 
-    const problem = await Problem.findOne({
-      $or: [{ _id: id.match(/^[0-9a-fA-F]{24}$/) ? id : null }, { ticketId: id }]
-    });
+    const problem = await Problem.findById(id);
 
     if (!problem) {
       return res.status(404).json({
@@ -667,7 +660,6 @@ export const updateMilestone = async (req, res) => {
     if (deliverableUrl) milestone.deliverableUrl = deliverableUrl;
     if (milestone.progress === 100) milestone.completionDate = new Date().toLocaleDateString();
 
-    // Check if all milestones completed to advance status
     const allCompleted = problem.milestones.every(m => m.progress === 100);
     if (allCompleted) {
       problem.status = 'field_testing';
@@ -707,9 +699,7 @@ export const validateSolution = async (req, res) => {
     const { id } = req.params;
     const { beneficiariesReached, economicSavingsInr, metricName, metricValue, officerName } = req.body;
 
-    const problem = await Problem.findOne({
-      $or: [{ _id: id.match(/^[0-9a-fA-F]{24}$/) ? id : null }, { ticketId: id }]
-    });
+    const problem = await Problem.findById(id);
 
     if (!problem) {
       return res.status(404).json({
@@ -766,12 +756,12 @@ export const getMapLocations = async (req, res) => {
     if (district) filter['location.district'] = new RegExp(district, 'i');
 
     const problems = await Problem.find(filter)
-      .select('ticketId title domain priority status location evidence aiAnalysis allocatedUniversity proposals industryPartners')
+      .populate('allocatedUniversity', 'name')
+      .populate('industryPartners', 'name')
       .lean();
 
     const hotspots = problems.map((p) => ({
       id: p._id,
-      ticketId: p.ticketId,
       title: p.title,
       domain: p.domain,
       severity: p.priority || 'Medium',
@@ -820,18 +810,21 @@ export const getNearbyProblems = async (req, res) => {
       });
     }
 
-    const maxDistanceMeters = parseFloat(radiusKm) * 1000;
+    const targetLat = parseFloat(lat);
+    const targetLng = parseFloat(lng);
+    const radius = parseFloat(radiusKm);
+
+    // Approximate distance filter by bounding box (1 deg lat ~ 111km)
+    const latDelta = radius / 111;
+    const lngDelta = radius / (111 * Math.cos(targetLat * (Math.PI / 180)) || 1);
+
     const problems = await Problem.find({
-      'location.geoPoint': {
-        $near: {
-          $geometry: {
-            type: 'Point',
-            coordinates: [parseFloat(lng), parseFloat(lat)]
-          },
-          $maxDistance: maxDistanceMeters
-        }
-      }
-    }).limit(20);
+      'location.lat': { $gte: targetLat - latDelta, $lte: targetLat + latDelta },
+      'location.lng': { $gte: targetLng - lngDelta, $lte: targetLng + lngDelta }
+    })
+      .populate('allocatedUniversity')
+      .populate('industryPartners')
+      .limit(20);
 
     return res.status(200).json({
       success: true,
@@ -857,8 +850,7 @@ export const approveTripartiteProposal = async (req, res) => {
     const { proposalId } = req.params;
     const { action = 'approve', remarks = '', sanctionOrderNumber = '' } = req.body;
 
-    const ProposalModel = (await import('../models/Proposal.js')).default;
-    const proposal = await ProposalModel.findById(proposalId)
+    const proposal = await Proposal.findById(proposalId)
       .populate('problem')
       .populate('university')
       .populate('industryOffer.industry');
@@ -867,7 +859,7 @@ export const approveTripartiteProposal = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Proposal not found' });
     }
 
-    const problem = await Problem.findById(proposal.problem._id);
+    const problem = await Problem.findById(proposal.problem._id || proposal.problem);
     if (!problem) {
       return res.status(404).json({ success: false, message: 'Associated problem not found' });
     }
@@ -887,23 +879,13 @@ export const approveTripartiteProposal = async (req, res) => {
       // Update Problem status & allocation
       problem.status = 'in_progress';
       if (proposal.university) {
-        problem.allocatedUniversity = {
-          universityId: proposal.university._id.toString(),
-          name: proposal.university.name,
-          facultyLead: proposal.facultyMembers?.[0] || { name: 'Lead PI' }
-        };
+        problem.allocatedUniversity = proposal.university._id || proposal.university;
       }
       if (proposal.industryOffer?.industry) {
-        const ind = proposal.industryOffer.industry;
-        problem.industryPartners = [
-          {
-            partnerId: ind._id.toString(),
-            name: ind.name,
-            grantAmount: proposal.industryOffer.fundingAmount || 500000,
-            mentorName: proposal.industryOffer.mentorName || 'Corporate Mentor',
-            committedResources: proposal.industryOffer.equipmentProvided || []
-          }
-        ];
+        const indId = proposal.industryOffer.industry._id || proposal.industryOffer.industry;
+        if (!problem.industryPartners.includes(indId)) {
+          problem.industryPartners.push(indId);
+        }
       }
 
       // Initialize milestones if empty
@@ -916,17 +898,7 @@ export const approveTripartiteProposal = async (req, res) => {
         ];
       }
 
-      // Append to Problem Timeline and Audit History for Citizen visibility
-      if (!Array.isArray(problem.auditHistory)) problem.auditHistory = [];
-
       const sanctionNote = `Government approved research implementation by ${proposal.university?.name || 'HEI'} with CSR co-sponsorship from ${proposal.industryOffer?.industry?.name || 'Industry Sponsor'} (Sanction: ${generatedSanction}).`;
-      
-      await pushProblemTimeline(
-        problem._id,
-        'Tripartite Partnership Sanctioned by Government',
-        sanctionNote,
-        'green'
-      );
 
       problem.auditHistory.unshift({
         timestamp: new Date(),
@@ -940,14 +912,13 @@ export const approveTripartiteProposal = async (req, res) => {
 
       // Notify University
       if (proposal.university) {
-        const UniversityModel = (await import('../models/University.js')).default;
-        await UniversityModel.findByIdAndUpdate(proposal.university._id, {
+        await University.findByIdAndUpdate(proposal.university._id || proposal.university, {
           $push: {
             notifications: {
               $each: [{
                 id: proposal._id,
                 schemaName: 'Proposal',
-                title: `Project Sanction Approved by Government! (#${problem.ticketId})`,
+                title: `Project Sanction Approved by Government!`,
                 description: `Government has approved and sanctioned the tripartite project with ${proposal.industryOffer?.industry?.name || 'Industry Sponsor'}. Implementation is now active.`,
                 read: false,
                 createdAt: new Date()
@@ -960,14 +931,13 @@ export const approveTripartiteProposal = async (req, res) => {
 
       // Notify Industry
       if (proposal.industryOffer?.industry) {
-        const IndustryModel = (await import('../models/IndustryPartner.js')).default;
-        await IndustryModel.findByIdAndUpdate(proposal.industryOffer.industry._id, {
+        await IndustryPartner.findByIdAndUpdate(proposal.industryOffer.industry._id || proposal.industryOffer.industry, {
           $push: {
             notifications: {
               $each: [{
                 id: proposal._id,
                 schemaName: 'Proposal',
-                title: `Govt Sanction Order Issued for Co-Sponsorship (#${problem.ticketId})`,
+                title: `Govt Sanction Order Issued for Co-Sponsorship`,
                 description: `Tripartite project with ${proposal.university?.name || 'University'} has been sanctioned by Government under Section 135 CSR mandate.`,
                 read: false,
                 createdAt: new Date()
@@ -979,15 +949,14 @@ export const approveTripartiteProposal = async (req, res) => {
       }
 
       // Notify Submitter Citizen
-      if (problem.user) {
-        const UserModel = (await import('../models/User.js')).default;
-        await UserModel.findByIdAndUpdate(problem.user, {
+      if (problem.submitter?.userId) {
+        await User.findByIdAndUpdate(problem.submitter.userId, {
           $push: {
             notifications: {
               $each: [{
                 id: problem._id,
                 schemaName: 'Problem',
-                title: `Your Challenge is Now In Progress! (#${problem.ticketId})`,
+                title: `Your Challenge is Now In Progress!`,
                 description: `Your challenge '${problem.title}' has been matched with ${proposal.university?.name || 'University'} and co-sponsored by ${proposal.industryOffer?.industry?.name || 'Industry Partner'}.`,
                 read: false,
                 createdAt: new Date()
@@ -1014,17 +983,7 @@ export const approveTripartiteProposal = async (req, res) => {
       };
       await proposal.save();
 
-      // Append to Problem timeline and auditHistory
-      if (!Array.isArray(problem.auditHistory)) problem.auditHistory = [];
-
       const declineNote = `Government review committee declined the proposal from ${proposal.university?.name || 'HEI'}. Remarks: ${remarks || 'Review committee decision'}`;
-
-      await pushProblemTimeline(
-        problem._id,
-        'Tripartite Proposal Declined by Government',
-        declineNote,
-        'rose'
-      );
 
       problem.auditHistory.unshift({
         timestamp: new Date(),
@@ -1035,46 +994,6 @@ export const approveTripartiteProposal = async (req, res) => {
       });
 
       await problem.save();
-
-      // Notify University
-      if (proposal.university) {
-        const UniversityModel = (await import('../models/University.js')).default;
-        await UniversityModel.findByIdAndUpdate(proposal.university._id, {
-          $push: {
-            notifications: {
-              $each: [{
-                id: proposal._id,
-                schemaName: 'Proposal',
-                title: `Proposal Review Decision: Declined (#${problem.ticketId})`,
-                description: `Government has declined the tripartite proposal for '${problem.title}'. Reason: ${remarks || 'Administrative review committee decision'}`,
-                read: false,
-                createdAt: new Date()
-              }],
-              $position: 0
-            }
-          }
-        });
-      }
-
-      // Notify Industry
-      if (proposal.industryOffer?.industry) {
-        const IndustryModel = (await import('../models/IndustryPartner.js')).default;
-        await IndustryModel.findByIdAndUpdate(proposal.industryOffer.industry._id, {
-          $push: {
-            notifications: {
-              $each: [{
-                id: proposal._id,
-                schemaName: 'Proposal',
-                title: `Govt Sanction Update: Proposal Declined (#${problem.ticketId})`,
-                description: `Government has declined the tripartite project proposal for challenge #${problem.ticketId}. Reason: ${remarks || 'Administrative review committee decision'}`,
-                read: false,
-                createdAt: new Date()
-              }],
-              $position: 0
-            }
-          }
-        });
-      }
 
       return res.status(200).json({
         success: true,
@@ -1098,15 +1017,14 @@ export const approveTripartiteProposal = async (req, res) => {
  */
 export const getTripartiteProposalsForGovt = async (req, res) => {
   try {
-    const ProposalModel = (await import('../models/Proposal.js')).default;
-    const proposals = await ProposalModel.find()
+    const proposals = await Proposal.find()
       .populate({
         path: 'problem',
-        select: 'ticketId title description domain location evidence status priority resolutionStatus timeline submitter createdAt'
+        select: 'title description domain location evidence status priority resolutionStatus submitter createdAt'
       })
       .populate({
         path: 'university',
-        select: 'name shortName location type contactEmail availableDomains academicDisciplines facultySpecializations facultyMembers'
+        select: 'name location type contactEmail availableDomains'
       })
       .populate({
         path: 'industryOffer.industry',
@@ -1130,6 +1048,7 @@ export const getTripartiteProposalsForGovt = async (req, res) => {
 
 export default {
   createProblem,
+  getMyProblems,
   getProblems,
   getProblemById,
   triageAndAllocate,

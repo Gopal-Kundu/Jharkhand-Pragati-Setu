@@ -78,7 +78,7 @@ export const sendEmailNotification = async ({ to, subject, html, text }) => {
  * Email template for Citizen Problem Submission Receipt
  */
 export const sendProblemSubmittedEmail = async (problemData, recipientEmail) => {
-  const subject = `[SIH 2026 Ticket #${problemData.ticketId || problemData._id}] Problem Registered Successfully`;
+  const subject = `[SIH 2026 Challenge #${problemData._id}] Problem Registered Successfully`;
   const html = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 8px;">
       <div style="background-color: #0f172a; padding: 16px; border-radius: 6px; text-align: center; color: white;">
@@ -90,13 +90,13 @@ export const sendProblemSubmittedEmail = async (problemData, recipientEmail) => 
         <p>Your societal challenge statement has been successfully logged into the AI Triage & Innovation pipeline:</p>
         <div style="background-color: #f8fafc; padding: 16px; border-left: 4px solid #0284c7; margin: 16px 0;">
           <h3 style="margin: 0 0 8px 0; color: #0f172a;">${problemData.title}</h3>
-          <p style="margin: 4px 0;"><strong>Ticket ID:</strong> ${problemData.ticketId || problemData._id}</p>
+          <p style="margin: 4px 0;"><strong>Problem ID:</strong> ${problemData._id}</p>
           <p style="margin: 4px 0;"><strong>Domain:</strong> ${problemData.domain}</p>
           <p style="margin: 4px 0;"><strong>Location:</strong> ${problemData.location?.district || 'Jharkhand'}, Block: ${problemData.location?.block || 'N/A'}</p>
           <p style="margin: 4px 0;"><strong>Priority:</strong> ${problemData.priority || 'Medium'}</p>
         </div>
         <p>Our AI system has categorized this problem statement and forwarded it to the relevant Government Department and University Innovation Centers for multidisciplinary solution prototyping.</p>
-        <p style="color: #64748b; font-size: 13px;">You can track real-time milestones on the portal using your Ticket ID.</p>
+        <p style="color: #64748b; font-size: 13px;">You can track real-time milestones on the portal using your Problem ID.</p>
       </div>
       <hr style="border: none; border-top: 1px solid #e2e8f0;" />
       <p style="font-size: 12px; color: #94a3b8; text-align: center;">Smart India Hackathon 2026 • Societal Problem-to-Innovation Ecosystem</p>
@@ -110,7 +110,7 @@ export const sendProblemSubmittedEmail = async (problemData, recipientEmail) => 
  * Email template for Institutional Allocation to University Nodal Officer & Faculty Lead
  */
 export const sendUniversityAllocationEmail = async (problemData, universityEmail, universityName) => {
-  const subject = `[Action Required] Challenge Statement Allocated to ${universityName} #${problemData.ticketId || problemData._id}`;
+  const subject = `[Action Required] Challenge Statement Allocated to ${universityName} #${problemData._id}`;
   const html = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 8px;">
       <div style="background-color: #0f172a; padding: 16px; border-radius: 6px; text-align: center; color: white;">

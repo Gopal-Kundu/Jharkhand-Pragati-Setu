@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { industryApi } from '../../services/industryApi';
 import ProblemDetailsModal from '../common/ProblemDetailsModal';
+import ProposalDetailsModal from '../common/ProposalDetailsModal';
 import { useSelector } from 'react-redux';
 import { Link } from 'react-router-dom';
 import { 
@@ -42,7 +43,8 @@ const ALL_DOMAINS = [
   'Urban Development',
   'Accessibility',
   'Public Administration',
-  'Rural Livelihoods'
+  'Rural Livelihoods',
+  'Others'
 ];
 
 
@@ -78,7 +80,10 @@ export default function IndustryPortal() {
 
   // Modal States
   const [selectedProblemIdForModal, setSelectedProblemIdForModal] = useState(null);
+  const [selectedProposalForModal, setSelectedProposalForModal] = useState(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [submittingRegister, setSubmittingRegister] = useState(false);
+  const [submittingUpdate, setSubmittingUpdate] = useState(false);
   const [isOfferModalOpen, setIsOfferModalOpen] = useState(false);
   const [selectedProposalForOffer, setSelectedProposalForOffer] = useState(null);
   const [submittingOffer, setSubmittingOffer] = useState(false);
@@ -167,6 +172,7 @@ export default function IndustryPortal() {
     }
 
     try {
+      setSubmittingRegister(true);
       const payload = {
         name: industryForm.name.trim(),
         type: industryForm.type,
@@ -189,6 +195,8 @@ export default function IndustryPortal() {
       loadIndustryData();
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to register industry partner');
+    } finally {
+      setSubmittingRegister(false);
     }
   };
 
@@ -196,6 +204,7 @@ export default function IndustryPortal() {
   const handleUpdateIndustry = async (e) => {
     e.preventDefault();
     try {
+      setSubmittingUpdate(true);
       const payload = {
         name: industryForm.name.trim(),
         type: industryForm.type,
@@ -219,6 +228,8 @@ export default function IndustryPortal() {
       loadIndustryData();
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to update industry details');
+    } finally {
+      setSubmittingUpdate(false);
     }
   };
 
@@ -550,9 +561,17 @@ export default function IndustryPortal() {
             <div className="pt-4 border-t border-slate-100 flex justify-end">
               <button
                 type="submit"
-                className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs sm:text-sm px-8 py-3 rounded-2xl shadow-md shadow-emerald-600/20 cursor-pointer transition-all hover:scale-105"
+                disabled={submittingRegister}
+                className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs sm:text-sm px-8 py-3 rounded-2xl shadow-md shadow-emerald-600/20 cursor-pointer transition-all hover:scale-105 flex items-center space-x-2 disabled:opacity-60 disabled:cursor-not-allowed"
               >
-                Register Entity &amp; Enter CSR Exchange &rarr;
+                {submittingRegister ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>Registering...</span>
+                  </>
+                ) : (
+                  <span>Register Entity &amp; Enter CSR Exchange &rarr;</span>
+                )}
               </button>
             </div>
           </form>
@@ -914,13 +933,29 @@ export default function IndustryPortal() {
 
                     {/* Action Bar */}
                     <div className="pt-4 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2">
-                      <button
-                        onClick={() => setSelectedProblemIdForModal(problem._id || problem.ticketId)}
-                        className="bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold px-3.5 py-2 rounded-xl border border-slate-200 flex items-center space-x-1.5 cursor-pointer transition-all hover:scale-105 shadow-sm"
-                      >
-                        <Eye className="w-3.5 h-3.5 text-slate-600" />
-                        <span>Check Proposal</span>
-                      </button>
+                      <div className="flex flex-wrap items-center gap-2">
+                        {/* Separate Problem Details Button */}
+                        <button
+                          type="button"
+                          onClick={() => setSelectedProblemIdForModal(problem._id)}
+                          className="bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold px-3 py-2 rounded-xl border border-slate-200 flex items-center space-x-1.5 cursor-pointer transition-all hover:scale-105 shadow-sm"
+                          title="View societal problem statement, ground evidence & photos"
+                        >
+                          <Eye className="w-3.5 h-3.5 text-slate-500" />
+                          <span>Problem Details</span>
+                        </button>
+
+                        {/* Separate Check Proposal Button */}
+                        <button
+                          type="button"
+                          onClick={() => setSelectedProposalForModal(prop)}
+                          className="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-bold px-3.5 py-2 rounded-xl border border-indigo-200 flex items-center space-x-1.5 cursor-pointer transition-all hover:scale-105 shadow-sm"
+                          title="Inspect university R&D proposal, PI faculty lead, budget & support required"
+                        >
+                          <FileText className="w-3.5 h-3.5 text-indigo-600" />
+                          <span>Check Proposal</span>
+                        </button>
+                      </div>
 
                       <div>
                         {hasOfferedByMe ? (
@@ -930,6 +965,7 @@ export default function IndustryPortal() {
                           </div>
                         ) : (
                           <button
+                            type="button"
                             onClick={() => handleOpenOfferModal(prop)}
                             className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-4 py-2 rounded-xl shadow-md shadow-emerald-600/20 cursor-pointer flex items-center space-x-1.5 transition-all hover:scale-105"
                           >
@@ -1173,9 +1209,17 @@ export default function IndustryPortal() {
                 </button>
                 <button
                   type="submit"
-                  className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-6 py-2.5 rounded-xl shadow-md cursor-pointer"
+                  disabled={submittingUpdate}
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-6 py-2.5 rounded-xl shadow-md cursor-pointer flex items-center space-x-2 disabled:opacity-60 disabled:cursor-not-allowed"
                 >
-                  Save Changes
+                  {submittingUpdate ? (
+                    <>
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      <span>Saving Changes...</span>
+                    </>
+                  ) : (
+                    <span>Save Changes</span>
+                  )}
                 </button>
               </div>
             </form>
@@ -1246,6 +1290,29 @@ export default function IndustryPortal() {
             </form>
           </div>
         </div>
+      )}
+
+      {/* Proposal Details Modal */}
+      {selectedProposalForModal && (
+        <ProposalDetailsModal
+          proposal={selectedProposalForModal}
+          isOpen={Boolean(selectedProposalForModal)}
+          onClose={() => setSelectedProposalForModal(null)}
+          onMakeOffer={(propToOffer) => {
+            setSelectedProposalForModal(null);
+            handleOpenOfferModal(propToOffer);
+          }}
+          onViewProblem={(probId) => {
+            setSelectedProblemIdForModal(probId);
+          }}
+          hasOfferedByMe={
+            Boolean(
+              (myIndustry?._id || '').toString() &&
+              selectedProposalForModal?.industryOffer &&
+              ((selectedProposalForModal.industryOffer.industry?._id || selectedProposalForModal.industryOffer.industry)?.toString() === (myIndustry?._id || '').toString())
+            )
+          }
+        />
       )}
 
       {/* Problem Details Modal */}

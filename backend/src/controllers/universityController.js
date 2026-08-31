@@ -3,7 +3,6 @@ import University from '../models/University.js';
 import User from '../models/User.js';
 import Proposal from '../models/Proposal.js';
 import Problem from '../models/Problem.js';
-import { pushProblemTimeline } from './timelineController.js';
 import IndustryPartner from '../models/IndustryPartner.js';
 import { matchProposalToIndustry } from '../ai/aiService.js';
 import { MASTER_HEI_CATALOG } from '../data/masterCatalog.js';
@@ -15,20 +14,20 @@ import { MASTER_HEI_CATALOG } from '../data/masterCatalog.js';
  */
 export const getUniversities = async (req, res) => {
   try {
-    const { discipline, district, domain } = req.query;
+    const { district, domain, type } = req.query;
     const filter = {};
 
-    if (discipline && discipline !== 'all') {
-      filter.academicDisciplines = new RegExp(discipline, 'i');
-    }
     if (district && district !== 'all') {
       filter['location.district'] = new RegExp(district, 'i');
     }
     if (domain && domain !== 'all') {
       filter.availableDomains = domain;
     }
+    if (type && type !== 'all') {
+      filter.type = type;
+    }
 
-    let universities = await University.find(filter).sort({ nirfRank: 1, name: 1 });
+    let universities = await University.find(filter).sort({ name: 1 });
 
     if (!universities || universities.length === 0) {
       universities = MASTER_HEI_CATALOG;
@@ -61,7 +60,7 @@ export const getMyUniversity = async (req, res) => {
       university = await University.findById(req.user.university)
         .populate({
           path: 'proposals',
-          populate: [{ path: 'problem' }, { path: 'aiMatchedIndustry' }, { path: 'assignedIndustry' }]
+          populate: [{ path: 'problem' }, { path: 'assignedIndustry' }]
         });
     }
 
@@ -69,17 +68,14 @@ export const getMyUniversity = async (req, res) => {
       university = await University.findOne({ registeredBy: req.user._id })
         .populate({
           path: 'proposals',
-          populate: [{ path: 'problem' }, { path: 'aiMatchedIndustry' }, { path: 'assignedIndustry' }]
+          populate: [{ path: 'problem' }, { path: 'assignedIndustry' }]
         });
     }
 
     // If still not linked, check if user's organization matches a university name
     if (!university && req.user.organization) {
       university = await University.findOne({
-        $or: [
-          { name: new RegExp(req.user.organization, 'i') },
-          { shortName: new RegExp(req.user.organization, 'i') }
-        ]
+        name: new RegExp(req.user.organization, 'i')
       });
 
       if (university) {
@@ -91,7 +87,6 @@ export const getMyUniversity = async (req, res) => {
     if (university) {
       const allUnivProposals = await Proposal.find({ university: university._id })
         .populate('problem')
-        .populate('aiMatchedIndustry')
         .populate('assignedIndustry')
         .populate('industryOffer.industry')
         .sort({ createdAt: -1 });
@@ -123,13 +118,9 @@ export const registerUniversity = async (req, res) => {
   try {
     const {
       name,
-      shortName,
       location,
       type = 'State University',
       availableDomains = [],
-      academicDisciplines = [],
-      researchCentres = [],
-      facultyCount = 50,
       contactEmail
     } = req.body;
 
@@ -140,14 +131,10 @@ export const registerUniversity = async (req, res) => {
       });
     }
 
-    const institutionId = 'UNIV_' + (shortName || name).replace(/[^a-zA-Z0-9]/g, '_').toUpperCase() + '_' + Date.now().toString().slice(-4);
-
     const parsedLocation = typeof location === 'string' ? JSON.parse(location) : (location || { city: 'Ranchi', district: 'Ranchi', state: 'Jharkhand' });
 
     const newUniversity = new University({
-      institutionId,
       name,
-      shortName: shortName || name,
       location: {
         city: parsedLocation.city || 'Ranchi',
         district: parsedLocation.district || 'Ranchi',
@@ -155,9 +142,6 @@ export const registerUniversity = async (req, res) => {
       },
       type,
       availableDomains: Array.isArray(availableDomains) ? availableDomains : [availableDomains],
-      academicDisciplines: Array.isArray(academicDisciplines) ? academicDisciplines : [],
-      researchCentres: Array.isArray(researchCentres) ? researchCentres : [],
-      facultyCount: Number(facultyCount) || 50,
       contactEmail: contactEmail || req.user.email,
       registeredBy: req.user._id,
       notifications: []
@@ -186,7 +170,7 @@ export const registerUniversity = async (req, res) => {
 };
 
 /**
- * @desc    Update registered university details (availableDomains, disciplines, etc.)
+ * @desc    Update registered university details (availableDomains, location, etc.)
  * @route   PUT /api/universities/my
  * @access  Private (University role)
  */
@@ -208,24 +192,16 @@ export const updateMyUniversity = async (req, res) => {
 
     const {
       name,
-      shortName,
       location,
       type,
       availableDomains,
-      academicDisciplines,
-      researchCentres,
-      facultyCount,
       contactEmail
     } = req.body;
 
     const updateData = {};
     if (name) updateData.name = name;
-    if (shortName) updateData.shortName = shortName;
     if (type) updateData.type = type;
     if (availableDomains) updateData.availableDomains = Array.isArray(availableDomains) ? availableDomains : [availableDomains];
-    if (academicDisciplines) updateData.academicDisciplines = Array.isArray(academicDisciplines) ? academicDisciplines : [academicDisciplines];
-    if (researchCentres) updateData.researchCentres = Array.isArray(researchCentres) ? researchCentres : [researchCentres];
-    if (facultyCount) updateData.facultyCount = Number(facultyCount);
     if (contactEmail) updateData.contactEmail = contactEmail;
     if (location) {
       const parsedLoc = typeof location === 'string' ? JSON.parse(location) : location;
@@ -352,21 +328,22 @@ export const createProposal = async (req, res) => {
     }
 
     if (!universityId) {
-      // Fallback: create default BIT Mesra / university profile
+      // Fallback: create default university profile
       const defaultUniv = await University.findOne() || await University.create({
-        institutionId: 'UNIV_DEFAULT',
         name: req.user.organization || 'Jharkhand State Innovation HEI',
-        shortName: 'HEI Partner',
         location: { city: 'Ranchi', district: 'Ranchi', state: 'Jharkhand' }
       });
       universityId = defaultUniv._id;
     }
 
     // Verify problem
-    const isObjectId = /^[0-9a-fA-F]{24}$/.test(problemId);
-    const problem = await Problem.findOne(
-      isObjectId ? { $or: [{ _id: problemId }, { ticketId: problemId }] } : { ticketId: problemId }
-    );
+    let problem = null;
+    if (problemId && /^[0-9a-fA-F]{24}$/.test(problemId)) {
+      problem = await Problem.findById(problemId);
+    }
+    if (!problem) {
+      problem = await Problem.findOne();
+    }
 
     if (!problem) {
       return res.status(404).json({
@@ -396,25 +373,19 @@ export const createProposal = async (req, res) => {
       status: 'submitted'
     });
 
-    // 2. AI Industry Matchmaking
+    // 2. AI Industry Matchmaking & Notification
     try {
       const allIndustries = await IndustryPartner.find();
       const matchResult = await matchProposalToIndustry(newProposal, allIndustries);
 
       if (matchResult && matchResult.matchedPartnerId) {
-        newProposal.aiMatchedIndustry = matchResult.matchedPartnerId;
-        newProposal.aiAnalysis = {
-          matchedRationale: matchResult.matchedRationale,
-          confidence: matchResult.confidence,
-          suggestedFundingRange: matchResult.suggestedFundingRange
-        };
         newProposal.status = 'industry_matched';
 
         // 3. Send Notification to Matched Industry Partner
         const industryNotif = {
           proposalId: newProposal._id,
           problemId: problem._id,
-          title: `New University R&D Proposal Matched (#${problem.ticketId})`,
+          title: `New University R&D Proposal Matched`,
           message: `Proposal '${title}' was created by university team requiring '${(newProposal.industrySupportRequired || []).join(', ')}' matching your CSR mandate.`,
           domain: problem.domain || 'Innovation',
           read: false,
@@ -440,15 +411,15 @@ export const createProposal = async (req, res) => {
     await University.findByIdAndUpdate(universityId, {
       $push: {
         proposals: newProposal._id
-      },
-      $inc: { activeProjects: 1 }
+      }
     });
 
-    // 5. Update Problem status, allocation, peopleImpacted & push universityId to proposalGivenUniversity
+    // 5. Update Problem status, allocation, peopleImpacted & push proposal & universityId
     const problemUpdate = {
       status: 'in_progress',
       allocatedUniversity: universityId,
       $addToSet: {
+        proposals: newProposal._id,
         proposalGivenUniversity: universityId
       }
     };
@@ -457,30 +428,29 @@ export const createProposal = async (req, res) => {
       problemUpdate.peopleImpacted = Number(peopleImpacted);
       problemUpdate['socialImpact.beneficiariesReached'] = Number(peopleImpacted);
       problemUpdate['socialImpact.metricValue'] = Number(peopleImpacted).toLocaleString();
-      problemUpdate['impactMetrics.metricValue'] = Number(peopleImpacted).toLocaleString();
-      problemUpdate['impactMetrics.metricName'] = 'Lives Impacted';
     }
 
-    await Problem.findByIdAndUpdate(problem._id, problemUpdate);
-
-    // 6. Append to Problem Timeline with University name & date
     const universityDoc = await University.findById(universityId);
     const universityName = universityDoc?.name || req.user?.organization || 'University R&D Lab';
-    const dateFormatted = new Date().toLocaleDateString('en-IN', {
-      day: 'numeric',
-      month: 'short',
-      year: 'numeric'
+
+    await Problem.findByIdAndUpdate(problem._id, {
+      ...problemUpdate,
+      $push: {
+        auditHistory: {
+          $each: [{
+            timestamp: new Date(),
+            officer: req.user?.name || universityName,
+            role: 'university',
+            action: `${universityName} submitted R&D Proposal`,
+            note: `${universityName} submitted an R&D implementation proposal ('${title}').`
+          }],
+          $position: 0
+        }
+      }
     });
 
-    await pushProblemTimeline(
-      problem._id,
-      `${universityName} submitted R&D Proposal`,
-      `${universityName} submitted an R&D implementation proposal ('${title}') on ${dateFormatted}.`,
-      'indigo'
-    );
-
-    // 7. Send notification to the user/citizen who reported this problem
-    const submitterUserId = problem.user || (problem.submitter?.email ? (await User.findOne({ email: problem.submitter.email }))?._id : null);
+    // 6. Send notification to the user/citizen who reported this problem
+    const submitterUserId = problem.submitter?.userId || (problem.submitter?.email ? (await User.findOne({ email: problem.submitter.email }))?._id : null);
     if (submitterUserId) {
       try {
         await User.findByIdAndUpdate(submitterUserId, {
@@ -489,7 +459,7 @@ export const createProposal = async (req, res) => {
               $each: [{
                 id: newProposal._id,
                 schemaName: 'Proposal',
-                title: `Proposal Submitted for #${problem.ticketId}`,
+                title: `Proposal Submitted for your challenge`,
                 description: `${universityName} submitted an R&D proposal for your reported challenge '${problem.title}'.`,
                 read: false,
                 createdAt: new Date()
@@ -571,14 +541,22 @@ export const respondToIndustryOffer = async (req, res) => {
         });
       }
 
-      // Append to Problem Timeline
+      // Append to Problem Audit History
       if (proposal.problem) {
-        await pushProblemTimeline(
-          proposal.problem._id || proposal.problem,
-          'Industry CSR Offer Accepted by University',
-          `${university.name} accepted CSR grant (₹${(proposal.industryOffer?.fundingAmount || 0).toLocaleString()}) and equipment support from ${proposal.industryOffer?.industry?.name || 'Industry Sponsor'}. Forwarded to Government.`,
-          'indigo'
-        );
+        await Problem.findByIdAndUpdate(proposal.problem._id || proposal.problem, {
+          $push: {
+            auditHistory: {
+              $each: [{
+                timestamp: new Date(),
+                officer: university.name,
+                role: 'university',
+                action: 'Industry CSR Offer Accepted by University',
+                note: `${university.name} accepted CSR grant (₹${(proposal.industryOffer?.fundingAmount || 0).toLocaleString()}) from ${proposal.industryOffer?.industry?.name || 'Industry Sponsor'}. Forwarded to Government.`
+              }],
+              $position: 0
+            }
+          }
+        });
       }
 
       return res.status(200).json({
@@ -626,7 +604,7 @@ export const respondToIndustryOffer = async (req, res) => {
 };
 
 /**
- * @desc    Get single University details with research labs & faculty leads
+ * @desc    Get single University details
  * @route   GET /api/universities/:id
  * @access  Public
  */
@@ -635,15 +613,14 @@ export const getUniversityById = async (req, res) => {
     const { id } = req.params;
     const isObjectId = /^[0-9a-fA-F]{24}$/.test(id);
     const query = isObjectId 
-      ? { $or: [{ _id: id }, { institutionId: id }, { shortName: new RegExp(`^${id}$`, 'i') }] }
-      : { $or: [{ institutionId: id }, { shortName: new RegExp(`^${id}$`, 'i') }] };
+      ? { $or: [{ _id: id }, { name: new RegExp(`^${id}$`, 'i') }] }
+      : { name: new RegExp(`^${id}$`, 'i') };
 
     let university = await University.findOne(query)
       .populate({
         path: 'proposals',
         populate: [
           { path: 'problem' },
-          { path: 'aiMatchedIndustry' },
           { path: 'assignedIndustry' },
           { path: 'industryOffer.industry' }
         ]
@@ -651,7 +628,7 @@ export const getUniversityById = async (req, res) => {
 
     if (!university) {
       const fallback = (MASTER_HEI_CATALOG || []).find(
-        h => h.institutionId === id || h.id === id || h.shortName?.toLowerCase() === id.toLowerCase()
+        h => h.id === id || h.name?.toLowerCase() === id.toLowerCase()
       );
       if (fallback) {
         return res.status(200).json({ success: true, university: fallback });
@@ -720,22 +697,25 @@ export const completeProposal = async (req, res) => {
         {
           status: 'deployed',
           resolutionStatus: 'solved',
-          progress: 100
+          $push: {
+            auditHistory: {
+              $each: [{
+                timestamp: new Date(),
+                officer: universityName,
+                role: 'university',
+                action: 'Project Finished & Problem Solved',
+                note: `${universityName} successfully concluded the R&D implementation for '${proposal.title}'. Challenge marked as SOLVED across the state network. ${completionNotes ? `Notes: ${completionNotes}` : ''}`
+              }],
+              $position: 0
+            }
+          }
         },
         { new: true }
       );
 
       if (problem) {
-        // 3. Add timeline event to the Problem
-        await pushProblemTimeline(
-          problem._id,
-          'Project Finished & Problem Solved',
-          `${universityName} successfully concluded the R&D implementation for '${proposal.title}'. Challenge marked as SOLVED across the state network. ${completionNotes ? `Notes: ${completionNotes}` : ''}`,
-          'green'
-        );
-
-        // 4. Send Notification to Citizen (Problem Submitter / Reporter)
-        let citizenUserId = problem.user || problem.submitter?.userId;
+        // 3. Send Notification to Citizen (Problem Submitter / Reporter)
+        let citizenUserId = problem.submitter?.userId;
         if (!citizenUserId && problem.submitter?.email) {
           const matchedCitizen = await User.findOne({ email: problem.submitter.email.toLowerCase().trim() });
           if (matchedCitizen) {
@@ -751,7 +731,7 @@ export const completeProposal = async (req, res) => {
                   $each: [{
                     id: new mongoose.Types.ObjectId(),
                     schemaName: 'Problem',
-                    title: `Your Reported Problem #${problem.ticketId} is SOLVED!`,
+                    title: `Your Reported Problem is SOLVED!`,
                     description: `Great news! ${universityName} has finished the solution project '${proposal.title}' and deployed the fix in your area.`,
                     read: false,
                     createdAt: new Date()
@@ -767,7 +747,7 @@ export const completeProposal = async (req, res) => {
       }
     }
 
-    // 5. Send Notification to Industry Partner
+    // 4. Send Notification to Industry Partner
     const industryPartnerId = proposal.industryOffer?.industry?._id || proposal.assignedIndustry;
     if (industryPartnerId) {
       try {
@@ -787,7 +767,7 @@ export const completeProposal = async (req, res) => {
       }
     }
 
-    // 6. Send Notification to Government Officers
+    // 5. Send Notification to Government Officers
     try {
       await User.updateMany(
         { role: { $in: ['government', 'admin'] } },
@@ -797,7 +777,7 @@ export const completeProposal = async (req, res) => {
               $each: [{
                 id: new mongoose.Types.ObjectId(),
                 schemaName: 'Problem',
-                title: `Project Finished & Challenge Resolved #${problem?.ticketId || ''}`,
+                title: `Project Finished & Challenge Resolved`,
                 description: `${universityName} has concluded the tripartite project '${proposal.title}' for problem '${problem?.title || ''}'. Status updated to SOLVED.`,
                 read: false,
                 createdAt: new Date()

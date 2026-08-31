@@ -140,13 +140,16 @@ export function StateProvider({ children }) {
           district: formData.districtName || formData.district || 'Ranchi',
           block: formData.block || '',
           panchayat: formData.panchayat || '',
-          state: 'Jharkhand',
+          state: formData.state || 'Jharkhand',
           lat: formData.gps?.lat || 23.3441,
-          lng: formData.gps?.lng || 85.3096
+          lng: formData.gps?.lng || 85.3096,
+          address: formData.village || formData.address || '',
+          pincode: formData.pincode || ''
         },
         submitter: {
           name: formData.name || 'Concerned Citizen',
           role: formData.submitterType === 'Panchayati Raj Institution' ? 'pri_panchayat' : 'individual_citizen',
+          organization: formData.organization || (formData.submitterType === 'Panchayati Raj Institution' ? 'Gram Panchayat' : 'Community Resident'),
           email: formData.email || '',
           phone: formData.phone || ''
         },
@@ -168,21 +171,21 @@ export function StateProvider({ children }) {
           success: false, 
           duplicate: Boolean(errPayload?.duplicate), 
           message: apiMessage,
-          existingTicketId: errPayload?.existingTicketId 
+          existingProblemId: errPayload?.existingProblemId || errPayload?.existingTicketId 
         };
       }
 
-      const createdProblem = submitAction.payload;
-      const ticketId = createdProblem?.ticketId || `JH-${Date.now().toString().slice(-4)}`;
+      const createdProblem = submitAction.payload?.problem || submitAction.payload;
+      const problemId = createdProblem?._id || `JH-${Date.now().toString().slice(-4)}`;
 
       toast.success(`Problem Statement Registered!`);
-      logAction('AI Engine', 'AI Domain Classified', ticketId, `Categorized as ${payload.domain}`);
-      addNotification(`New Challenge #${ticketId} registered (${payload.domain})`, 'government');
-      setSelectedClusterId(ticketId);
+      logAction('AI Engine', 'AI Domain Classified', problemId, `Categorized as ${payload.domain}`);
+      addNotification(`New Challenge registered (${payload.domain})`, 'government');
+      setSelectedClusterId(problemId);
 
       return {
         success: true,
-        clusterId: ticketId,
+        clusterId: problemId,
         isMerged: false,
         domain: payload.domain
       };
@@ -193,7 +196,7 @@ export function StateProvider({ children }) {
         success: false, 
         duplicate: Boolean(error?.response?.data?.duplicate), 
         message: apiMsg,
-        existingTicketId: error?.response?.data?.existingTicketId 
+        existingProblemId: error?.response?.data?.existingProblemId || error?.response?.data?.existingTicketId 
       };
     }
   };
@@ -306,7 +309,7 @@ export function StateProvider({ children }) {
 
   // Safe selectedCluster from live MongoDB state
   const selectedCluster = (problemClusters || []).find(
-    c => c && (c.ticketId === selectedClusterId || c.id === selectedClusterId || c._id === selectedClusterId)
+    c => c && (c._id === selectedClusterId || c.id === selectedClusterId)
   ) || problemClusters[0] || null;
 
   return (

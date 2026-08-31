@@ -6,20 +6,10 @@ import mongoose from 'mongoose';
  */
 const universitySchema = new mongoose.Schema(
   {
-    institutionId: {
-      type: String,
-      required: true,
-      unique: true,
-      index: true
-    },
     name: {
       type: String,
       required: true,
       trim: true
-    },
-    shortName: {
-      type: String,
-      default: ''
     },
     location: {
       city: { type: String, required: true },
@@ -28,12 +18,8 @@ const universitySchema = new mongoose.Schema(
     },
     type: {
       type: String,
-      enum: ['Institute of National Importance', 'Central University', 'Deemed University & Tech Hub', 'State University', 'Autonomous College', 'Medical Institution', 'Agricultural University'],
+      enum: ['Institute of National Importance', 'Central University', 'Deemed University & Tech Hub', 'State University', 'Autonomous College', 'Medical Institution', 'Agricultural University', 'Others', 'others'],
       default: 'Deemed University & Tech Hub'
-    },
-    nirfRank: {
-      type: Number,
-      default: null
     },
     availableDomains: [
       {
@@ -48,7 +34,9 @@ const universitySchema = new mongoose.Schema(
           'Urban Development',
           'Accessibility',
           'Public Administration',
-          'Rural Livelihoods'
+          'Rural Livelihoods',
+          'Others',
+          'others'
         ]
       }
     ],
@@ -63,30 +51,6 @@ const universitySchema = new mongoose.Schema(
       ref: 'User',
       default: null
     },
-    academicDisciplines: [String],
-    researchCentres: [String],
-    incubationCentres: [String],
-    facultyCount: {
-      type: Number,
-      default: 100
-    },
-    activeProjects: {
-      type: Number,
-      default: 0
-    },
-    successRate: {
-      type: String,
-      default: '90%'
-    },
-    facultySpecializations: [
-      {
-        name: { type: String, required: true },
-        department: { type: String, required: true },
-        expertise: { type: String, required: true },
-        email: { type: String, default: '' },
-        avatar: { type: String, default: '' }
-      }
-    ],
     contactEmail: {
       type: String,
       default: ''

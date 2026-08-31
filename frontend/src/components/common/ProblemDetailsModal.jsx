@@ -134,18 +134,54 @@ export default function ProblemDetailsModal({ problemId, onClose }) {
   const domain = problem?.domain || 'Water Resources';
   const Icon = DOMAIN_ICONS[domain] || Droplets;
   const colorScheme = DOMAIN_COLORS[domain] || 'bg-emerald-50 text-emerald-700 border-emerald-200';
-  const isSolved = problem?.resolutionStatus === 'solved' || problem?.status === 'validated';
+  const isSolved = problem?.resolutionStatus === 'solved' || problem?.status === 'validated' || problem?.status === 'deployed';
+  
   const proposal = problem?.proposals?.[0];
-  const industryPartner = problem?.industryPartners?.[0];
+  const industryPartner =
+    proposal?.assignedIndustry ||
+    proposal?.industryOffer?.industry ||
+    problem?.industryPartners?.[0];
 
-  const facultyLeadName = getSafeString(problem?.allocatedUniversity?.facultyLead, 'pending');
-  const facultyLeadDept = problem?.allocatedUniversity?.facultyLead?.department
-    ? ` (${problem.allocatedUniversity.facultyLead.department})`
-    : '';
+  const univDoc = problem?.allocatedUniversity || proposal?.university;
+  const universityName = univDoc?.name || (typeof univDoc === 'string' ? univDoc : 'University: pending');
+
+  const facultyLeadName =
+    proposal?.facultyMembers?.[0]?.name ||
+    proposal?.facultyAdvisor ||
+    (typeof univDoc?.facultyLead === 'string' ? univDoc.facultyLead : univDoc?.facultyLead?.name) ||
+    'pending';
+
+  const facultyLeadDept =
+    proposal?.facultyMembers?.[0]?.department
+      ? ` (${proposal.facultyMembers[0].department})`
+      : univDoc?.facultyLead?.department
+      ? ` (${univDoc.facultyLead.department})`
+      : '';
 
   const submitterName = getSafeString(problem?.submitter?.name, 'Concerned Citizen');
-  const mentorName = getSafeString(industryPartner?.mentorName, 'Pending');
-  const studentLeadName = getSafeString(proposal?.team?.studentLead, 'Student Lead');
+  const industryName =
+    industryPartner?.name ||
+    industryPartner?.companyName ||
+    proposal?.assignedIndustry?.name ||
+    'pending';
+
+  const mentorName =
+    proposal?.industryOffer?.mentorName ||
+    industryPartner?.leadMentors?.[0]?.name ||
+    industryPartner?.mentorAssigned ||
+    'pending';
+
+  const grantAmount =
+    proposal?.industryOffer?.fundingAmount ||
+    industryPartner?.grantAmount ||
+    proposal?.estimatedBudget ||
+    (isSolved ? 2200000 : 0);
+
+  const studentLeadName =
+    proposal?.teamMembers?.[0]?.name ||
+    proposal?.teamLead ||
+    proposal?.team?.studentLead ||
+    'Lead Student Researcher';
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-slate-900/70 backdrop-blur-sm animate-in fade-in overflow-y-auto">
@@ -261,9 +297,7 @@ export default function ProblemDetailsModal({ problemId, onClose }) {
                                 <Play className="w-2.5 h-2.5 fill-current text-white" />
                                 <span>Video Evidence</span>
                               </span>
-                              <span className="font-medium text-slate-300">
-                                {currentEvidence.caption || currentEvidence.name || `Ground Site Video Recording #${activeMediaIndex + 1}`}
-                              </span>
+                              
                             </div>
                             <a
                               href={currentUrl}
@@ -283,9 +317,7 @@ export default function ProblemDetailsModal({ problemId, onClose }) {
                             alt={problem.title}
                             className="w-full h-72 sm:h-96 object-cover object-center"
                           />
-                          <div className="absolute bottom-3 left-3 bg-black/60 backdrop-blur-md px-3.5 py-1.5 rounded-xl text-white text-xs font-semibold border border-white/20">
-                            {currentEvidence.caption || `Ground Site Photo #${activeMediaIndex + 1}`}
-                          </div>
+                          
                           <a
                             href={currentUrl}
                             target="_blank"
@@ -391,7 +423,7 @@ export default function ProblemDetailsModal({ problemId, onClose }) {
 
                   <div>
                     <h4 className="font-extrabold text-base text-slate-900 font-heading">
-                      {getSafeString(problem.allocatedUniversity?.name, 'Higher Education Lab')}
+                      {universityName}
                     </h4>
                     <p className="text-xs text-slate-600 mt-1">
                       Faculty Lead: <strong>{facultyLeadName}{facultyLeadDept}</strong>
@@ -401,12 +433,12 @@ export default function ProblemDetailsModal({ problemId, onClose }) {
                   {proposal && (
                     <div className="p-3.5 rounded-2xl bg-purple-50/70 border border-purple-100 text-xs space-y-1.5">
                       <div className="font-bold text-purple-950">Prototype Proposal: {proposal.title}</div>
-                      <p className="text-slate-600 text-[11px] leading-relaxed line-clamp-3">{proposal.abstract}</p>
-                      {proposal.team && (
-                        <div className="text-[11px] text-purple-900 pt-1 font-mono">
-                          Team: {studentLeadName} {proposal.team.department ? `(${proposal.team.department})` : ''}
-                        </div>
-                      )}
+                      <p className="text-slate-600 text-[11px] leading-relaxed line-clamp-3">
+                        {proposal.description || proposal.abstract}
+                      </p>
+                      <div className="text-[11px] text-purple-900 pt-1 font-mono">
+                        Team Lead: {studentLeadName}
+                      </div>
                     </div>
                   )}
                 </div>
@@ -420,7 +452,7 @@ export default function ProblemDetailsModal({ problemId, onClose }) {
 
                   <div>
                     <h4 className="font-extrabold text-base text-slate-900 font-heading">
-                      {getSafeString(industryPartner?.companyName, 'State CSR Foundation')}
+                      {industryName}
                     </h4>
                     <p className="text-xs text-slate-600 mt-1">
                       Mentor: <strong>{mentorName}</strong>
@@ -431,58 +463,68 @@ export default function ProblemDetailsModal({ problemId, onClose }) {
                     <div>
                       <div className="text-[11px] text-slate-500 font-medium">CSR Grant Disbursed</div>
                       <div className="text-xl font-black text-amber-900 font-heading">
-                        {industryPartner?.grantAmount ? `₹${(industryPartner.grantAmount / 100000).toFixed(1)} Lakhs` : 'Pending'}
+                        {grantAmount}
                       </div>
                     </div>
-
                   </div>
                 </div>
 
               </div>
 
               {/* Problem Audit & Innovation Tracking Timeline */}
-              {problem.timeline && problem.timeline.length > 0 && (
-                <div className="p-6 rounded-3xl bg-white border border-slate-200 space-y-4 shadow-sm">
-                  <div className="flex items-center space-x-2 text-xs font-bold font-mono text-slate-600 uppercase tracking-wider">
-                    <Clock className="w-4 h-4 text-emerald-600" />
-                    <span>Milestone &amp; Partnership Timeline ({problem.timeline.length} events)</span>
-                  </div>
+              {((problem.timeline && problem.timeline.length > 0) || (problem.auditHistory && problem.auditHistory.length > 0)) && (() => {
+                const events = (problem.timeline && problem.timeline.length > 0) 
+                  ? problem.timeline 
+                  : (problem.auditHistory || []).map(a => ({
+                      title: a.action || 'Milestone Update',
+                      description: a.note || `${a.officer ? `By: ${a.officer}` : ''}`,
+                      createdAt: a.timestamp,
+                      colour: 'emerald'
+                    }));
 
-                  <div className="relative pl-6 space-y-4 border-l-2 border-slate-200 ml-2">
-                    {problem.timeline.map((event, tIdx) => {
-                      const colorMap = {
-                        green: 'bg-emerald-600 ring-emerald-100',
-                        emerald: 'bg-emerald-600 ring-emerald-100',
-                        blue: 'bg-blue-600 ring-blue-100',
-                        indigo: 'bg-indigo-600 ring-indigo-100',
-                        amber: 'bg-amber-500 ring-amber-100',
-                        rose: 'bg-rose-600 ring-rose-100',
-                        purple: 'bg-purple-600 ring-purple-100'
-                      };
-                      const dotStyle = colorMap[event.colour] || colorMap.green;
-                      const eventTime = event.createdAt || event.timestamp;
+                return (
+                  <div className="p-6 rounded-3xl bg-white border border-slate-200 space-y-4 shadow-sm">
+                    <div className="flex items-center space-x-2 text-xs font-bold font-mono text-slate-600 uppercase tracking-wider">
+                      <Clock className="w-4 h-4 text-emerald-600" />
+                      <span>Milestone &amp; Partnership Activity ({events.length} events)</span>
+                    </div>
 
-                      return (
-                        <div key={tIdx} className="relative space-y-1">
-                          <div className={`absolute -left-[31px] top-1 w-3.5 h-3.5 rounded-full ring-4 ${dotStyle}`} />
-                          <div className="flex flex-wrap items-center justify-between gap-1 text-xs">
-                            <span className="font-bold text-slate-900">{event.title || event.action}</span>
-                            <span className="text-[10px] text-slate-400 font-mono">
-                              {eventTime ? new Date(eventTime).toLocaleDateString() : 'Active'}
-                            </span>
+                    <div className="relative pl-6 space-y-4 border-l-2 border-slate-200 ml-2">
+                      {events.map((event, tIdx) => {
+                        const colorMap = {
+                          green: 'bg-emerald-600 ring-emerald-100',
+                          emerald: 'bg-emerald-600 ring-emerald-100',
+                          blue: 'bg-blue-600 ring-blue-100',
+                          indigo: 'bg-indigo-600 ring-indigo-100',
+                          amber: 'bg-amber-500 ring-amber-100',
+                          rose: 'bg-rose-600 ring-rose-100',
+                          purple: 'bg-purple-600 ring-purple-100'
+                        };
+                        const ringColor = colorMap[event.colour] || colorMap.green;
+
+                        return (
+                          <div key={tIdx} className="relative space-y-1">
+                            <div className={`absolute -left-[31px] top-1.5 w-3.5 h-3.5 rounded-full ring-4 ${ringColor}`} />
+                            <div className="flex items-center justify-between text-xs">
+                              <span className="font-bold text-slate-900">{event.title}</span>
+                              {event.createdAt && (
+                                <span className="text-[10px] text-slate-400 font-mono">
+                                  {new Date(event.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                                </span>
+                              )}
+                            </div>
+                            {event.description && (
+                              <p className="text-xs text-slate-600 leading-relaxed bg-slate-50 p-2.5 rounded-xl border border-slate-100">
+                                {event.description}
+                              </p>
+                            )}
                           </div>
-                          <p className="text-xs text-slate-600 leading-relaxed">{event.description || event.note}</p>
-                          {event.officer && (
-                            <span className="text-[10.5px] font-medium text-slate-500 block">
-                              Logged by: <strong>{event.officer}</strong> {event.role ? `(${event.role.toUpperCase()})` : ''}
-                            </span>
-                          )}
-                        </div>
-                      );
-                    })}
+                        );
+                      })}
+                    </div>
                   </div>
-                </div>
-              )}
+                );
+              })()}
 
             </>
           )}

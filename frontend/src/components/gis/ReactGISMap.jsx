@@ -207,7 +207,7 @@ export default function ReactGISMap() {
 
           {/* Render Hotspot Markers */}
           {filteredProblems.map((p) => {
-            const ticket = p.ticketId || p.id || 'JH-WTR-1042';
+            const problemId = p._id || p.id;
             const lat = Number(p.location?.lat) || (p.district === 'khunti' ? 23.0841 : 23.3441);
             const lng = Number(p.location?.lng) || (p.district === 'khunti' ? 85.2514 : 85.3096);
             const domain = p.domain || p.primaryDomain || 'Water Resources';
@@ -215,7 +215,7 @@ export default function ReactGISMap() {
             const markerIcon = createHotspotMarker(domain, severity);
 
             return (
-              <React.Fragment key={ticket}>
+              <React.Fragment key={problemId}>
                 {/* Visual Impact Radius Circle for Critical Problems */}
                 {severity === 'Critical' && (
                   <Circle
@@ -236,7 +236,7 @@ export default function ReactGISMap() {
                     <div className="p-2 text-slate-900 max-w-xs space-y-2 font-sans">
                       <div className="flex items-center justify-between gap-1 border-b border-slate-200 pb-1.5">
                         <span className="text-[10px] font-mono font-bold text-indigo-900 bg-indigo-50 px-1.5 py-0.5 rounded">
-                          #{ticket}
+                          #{problemId?.slice(-6)}
                         </span>
                         <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded ${
                           severity === 'Critical' ? 'bg-red-100 text-red-800' : 'bg-amber-100 text-amber-800'
