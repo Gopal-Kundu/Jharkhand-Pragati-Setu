@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAppState } from '../../context/StateContext';
 import { useSelector, useDispatch } from 'react-redux';
-import { logoutUser } from '../../store/slices/authSlice';
+import { logoutUser, resetAuthState } from '../../store/slices/authSlice';
 import { changeGoogleLanguage } from '../../utils/googleTranslate';
 import { notificationApi } from '../../services/notificationApi';
 import NotificationsModal from './NotificationsModal';
@@ -58,10 +58,16 @@ export default function Navbar() {
   };
 
   const handleLogout = async () => {
-    await dispatch(logoutUser());
-    toast.success('Logged out successfully');
-    setMobileMenuOpen(false);
-    navigate('/auth');
+    try {
+      await dispatch(logoutUser());
+    } catch (err) {
+      console.warn('Logout warning:', err);
+    } finally {
+      dispatch(resetAuthState());
+      toast.success('Logged out successfully');
+      setMobileMenuOpen(false);
+      navigate('/auth', { replace: true });
+    }
   };
 
   const getRoleDashboardRoute = (role) => {

@@ -187,12 +187,32 @@ export const login = async (req, res) => {
 };
 
 /**
- * @desc    Logout user & clear HTTP-Only cookie
+ * @desc    Logout user & clear HTTP-Only cookie across all path and sameSite variations
  * @route   POST /api/auth/logout
  * @access  Public
  */
 export const logout = async (req, res) => {
-  res.clearCookie('token', getClearCookieOptions());
+  // Comprehensive cookie deletion covering all historical paths, sameSite, and partition variations
+  const clearConfigs = [
+    { path: '/', sameSite: 'none', secure: true, partitioned: true },
+    { path: '/', sameSite: 'none', secure: true },
+    { path: '/', sameSite: 'lax', secure: isProduction },
+    { path: '/api/auth', sameSite: 'none', secure: true, partitioned: true },
+    { path: '/api/auth', sameSite: 'none', secure: true },
+    { path: '/api/auth', sameSite: 'lax', secure: isProduction },
+    { path: '/api', sameSite: 'none', secure: true },
+    { path: '/api', sameSite: 'lax', secure: isProduction }
+  ];
+
+  clearConfigs.forEach((cfg) => {
+    res.cookie('token', '', {
+      httpOnly: true,
+      expires: new Date(0),
+      maxAge: 0,
+      ...cfg
+    });
+  });
+
   return res.status(200).json({ success: true, message: 'Logged out successfully' });
 };
 

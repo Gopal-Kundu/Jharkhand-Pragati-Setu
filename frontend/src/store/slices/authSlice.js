@@ -33,12 +33,13 @@ export const registerUser = createAsyncThunk('auth/registerUser', async (userDat
 });
 
 // Async Thunk: Logout User
-export const logoutUser = createAsyncThunk('auth/logoutUser', async (_, { rejectWithValue }) => {
+export const logoutUser = createAsyncThunk('auth/logoutUser', async (_, { dispatch, rejectWithValue }) => {
   try {
     await authApi.logout();
     return null;
   } catch (error) {
-    return rejectWithValue(error.message);
+    console.warn('[Logout]: API call encountered an error, clearing client state locally:', error.message);
+    return null;
   }
 });
 
@@ -58,6 +59,13 @@ export const authSlice = createSlice({
       state.activeRole = action.payload;
     },
     clearAuthError: (state) => {
+      state.error = null;
+    },
+    resetAuthState: (state) => {
+      state.user = null;
+      state.isAuthenticated = false;
+      state.activeRole = 'citizen';
+      state.loading = false;
       state.error = null;
     }
   },
@@ -134,5 +142,5 @@ export const authSlice = createSlice({
   }
 });
 
-export const { setActiveRole, clearAuthError } = authSlice.actions;
+export const { setActiveRole, clearAuthError, resetAuthState } = authSlice.actions;
 export default authSlice.reducer;
