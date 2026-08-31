@@ -5,28 +5,59 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-const isHttps = process.env.NODE_ENV === 'production' || process.env.VERCEL === '1' || Boolean(process.env.CLIENT_URL && process.env.CLIENT_URL.startsWith('https'));
+const isProduction =
+  process.env.NODE_ENV === 'production' ||
+  process.env.VERCEL === '1' ||
+  Boolean(process.env.CLIENT_URL && process.env.CLIENT_URL.startsWith('https'));
 
 /**
- * Generate JWT Token and set it inside an HTTP-Only secure cookie
- * 
- * @param {Object} res - Express Response object
- * @param {string} userId - Mongo ID of the authenticated user
+ * Robust cookie options for cross-environment authentication:
+ * - httpOnly: true (prevents client-side JS / XSS from reading JWT)
+ * - secure: isProduction (mandatory for HTTPS and SameSite=None)
+ * - sameSite: 'none' in production (allows cross-site credentials), 'lax' in development
+ * - path: '/' (ensures cookie is sent on all API routes: /api/auth, /api/problems, etc.)
+ * - maxAge: 7 days
+ * - partitioned: true in production (CHIPS: Cookies Having Independent Partitioned State
+ *   which solves Mobile Chrome / Android / iOS third-party cookie restrictions)
  */
-const isProduction = process.env.NODE_ENV === 'production' || process.env.VERCEL === '1' || Boolean(process.env.CLIENT_URL && process.env.CLIENT_URL.startsWith('https'));
+export const getCookieOptions = () => {
+  const options = {
+    httpOnly: true,
+    secure: isProduction,
+    sameSite: isProduction ? 'none' : 'lax',
+    path: '/',
+    maxAge: 7 * 24 * 60 * 60 * 1000
+  };
 
-const cookieOptions = {
-  httpOnly: true,
-  secure: isProduction,
-  sameSite: isProduction ? 'none' : 'lax',
-  maxAge: 7 * 24 * 60 * 60 * 1000,
+  // Enable CHIPS (Partitioned cookies) for modern Chrome Mobile / Desktop cross-site contexts
+  if (isProduction) {
+    options.partitioned = true;
+  }
+
+  return options;
 };
+
+export const getClearCookieOptions = () => {
+  const options = {
+    httpOnly: true,
+    secure: isProduction,
+    sameSite: isProduction ? 'none' : 'lax',
+    path: '/'
+  };
+
+  if (isProduction) {
+    options.partitioned = true;
+  }
+
+  return options;
+};
+
 const sendTokenCookie = (res, userId) => {
   const token = jwt.sign({ id: userId }, process.env.JWT_SECRET || 'sih_2026_default_secret', {
     expiresIn: '7d'
   });
 
-  res.cookie('token', token, cookieOptions);
+  res.cookie('token', token, getCookieOptions());
   return token;
 };
 
@@ -161,7 +192,7 @@ export const login = async (req, res) => {
  * @access  Public
  */
 export const logout = async (req, res) => {
-  res.clearCookie('token', cookieOptions);
+  res.clearCookie('token', getClearCookieOptions());
   return res.status(200).json({ success: true, message: 'Logged out successfully' });
 };
 

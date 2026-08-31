@@ -16,7 +16,7 @@ import {
 } from '../controllers/problemController.js';
 import { addTimelineEvent } from '../controllers/timelineController.js';
 import upload from '../middleware/uploadMiddleware.js';
-import { protect, authorizeRoles } from '../middleware/authMiddleware.js';
+import { protect, optionalProtect, authorizeRoles } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
 
@@ -34,8 +34,8 @@ router.patch('/proposals/:proposalId/govt-approve', protect, approveTripartitePr
 // Public / Citizen Problem Submission & Query Routes
 // Multer accepts array of evidence files (photos, videos, docs) under any field name
 router.route('/')
-  .get(getProblems)
-  .post(upload.any(), createProblem);
+  .get(optionalProtect, getProblems)
+  .post(optionalProtect, upload.any(), createProblem);
 
 router.route('/:id')
   .get(getProblemById);

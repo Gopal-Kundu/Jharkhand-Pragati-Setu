@@ -49,6 +49,32 @@ export const protect = async (req, res, next) => {
 };
 
 /**
+ * Optional Authentication Middleware
+ * Decodes JWT if present in cookies or Authorization header and attaches `req.user`,
+ * but proceeds smoothly as guest if no token is present or token is expired.
+ */
+export const optionalProtect = async (req, res, next) => {
+  try {
+    let token = req.cookies?.token;
+
+    if (!token && req.headers.authorization && req.headers.authorization.startsWith('Bearer ')) {
+      token = req.headers.authorization.split(' ')[1];
+    }
+
+    if (token) {
+      const decoded = jwt.verify(token, process.env.JWT_SECRET || 'sih_2026_default_secret');
+      const user = await User.findById(decoded.id).select('-password');
+      if (user) {
+        req.user = user;
+      }
+    }
+  } catch (error) {
+    // Continue as guest without failing
+  }
+  next();
+};
+
+/**
  * Role-Based Access Control (RBAC) Middleware
  * Restricts route access to specified roles
  * 
@@ -68,5 +94,6 @@ export const authorizeRoles = (...allowedRoles) => {
 
 export default {
   protect,
+  optionalProtect,
   authorizeRoles
 };

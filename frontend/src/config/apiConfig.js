@@ -1,14 +1,33 @@
 /**
  * Centralized API & Backend Configuration
- * Production Backend URL: https://backend-psi-jade-47.vercel.app
+ * Seamlessly supports:
+ * 1. Vercel Same-Origin Rewrites (First-Party Cookies on Mobile Chrome & Desktop)
+ * 2. Vite Local Dev Proxy
+ * 3. Explicit VITE_API_BASE_URL override if provided
  */
-export const BACKEND_URL = import.meta.env.VITE_API_BASE_URL 
-  ? import.meta.env.VITE_API_BASE_URL.replace(/\/api\/?$/, '') 
-  : (import.meta.env.PROD || window.location.hostname !== 'localhost'
-      ? 'https://backend-psi-jade-47.vercel.app' 
-      : 'http://localhost:5000');
+const rawApiUrl = import.meta.env.VITE_API_BASE_URL;
 
-export const API_BASE_URL = `${BACKEND_URL}/api`;
+// Determine API_BASE_URL:
+// - If VITE_API_BASE_URL is explicitly set and starts with 'http', use it
+// - If VITE_API_BASE_URL is '/api' or relative, use '/api'
+// - In production / browser environments with Vercel rewrites or Vite dev proxy, default to '/api'
+export const API_BASE_URL = (() => {
+  if (rawApiUrl) {
+    return rawApiUrl.replace(/\/+$/, '');
+  }
+  // Default to relative '/api' for same-origin proxy (works with Vercel rewrites & Vite dev proxy)
+  return '/api';
+})();
+
+export const BACKEND_URL = (() => {
+  if (rawApiUrl && (rawApiUrl.startsWith('http://') || rawApiUrl.startsWith('https://'))) {
+    return rawApiUrl.replace(/\/api\/?$/, '');
+  }
+  if (typeof window !== 'undefined') {
+    return window.location.origin;
+  }
+  return 'https://backend-psi-jade-47.vercel.app';
+})();
 
 export const API_ENDPOINTS = {
   // Auth
