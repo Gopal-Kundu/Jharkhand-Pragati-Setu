@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { useDispatch } from 'react-redux';
+import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
+import { useDispatch, useSelector } from 'react-redux';
 import { StateProvider } from './context/StateContext';
 import { fetchSolvedChallenges } from './store/slices/ecosystemSlice';
 import { fetchCurrentUser } from './store/slices/authSlice';
@@ -17,7 +17,38 @@ import AuthPage from './pages/AuthPage';
 
 function AppRouter() {
   const dispatch = useDispatch();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { user } = useSelector((state) => state.auth);
   const [isLoading, setIsLoading] = useState(true);
+
+  // Helper to map user role to target route
+  const getTargetRoute = (role) => {
+    switch (role) {
+      case 'government':
+      case 'admin':
+        return '/dashboard';
+      case 'industry':
+        return '/industry';
+      case 'university':
+        return '/university';
+      case 'citizen':
+      case 'panchayat':
+      default:
+        return '/community';
+    }
+  };
+
+  // Run on every render: based on user, always navigate to appropriate route
+  // and make sure if user is logged in already, show these routes on base URL "/"
+  useEffect(() => {
+    if (user) {
+      const targetRoute = getTargetRoute(user.role);
+      if (location.pathname === '/' || location.pathname === '/auth') {
+        navigate(targetRoute, { replace: true });
+      }
+    }
+  });
 
   useEffect(() => {
     // 1. fetchSolvedChallenges(6) -> GET /api/problems?resolutionStatus=solved&limit=6
@@ -43,29 +74,33 @@ function AppRouter() {
   }
 
   return (
-    <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<MainLayout />}>
-          <Route index element={<LandingPage />} />
+    <Routes>
+      <Route path="/" element={<MainLayout />}>
+        <Route
+          index
+          element={
+            user ? <Navigate to={getTargetRoute(user.role)} replace /> : <LandingPage />}
+        />
 
-          <Route path="community" element={<CommunityPage />} />
-          <Route path="citizen" element={<Navigate to="/community" replace />} />
-          <Route path="panchayat" element={<Navigate to="/community" replace />} />
+        <Route path="community" element={<CommunityPage />} />
+        <Route path="citizen" element={<Navigate to="/community" replace />} />
+        <Route path="panchayat" element={<Navigate to="/community" replace />} />
 
-          <Route path="dashboard" element={<GovernmentPage />} />
-          <Route path="university" element={<UniversityPage />} />
+        <Route path="dashboard" element={<GovernmentPage />} />
+        <Route path="university" element={<UniversityPage />} />
 
+        <Route path="industry" element={<IndustryPage />} />
+        <Route path="map" element={<MapPage />} />
+        <Route
+          path="auth"
+          element={
+            user ? <Navigate to={getTargetRoute(user.role)} replace /> : <AuthPage />
+          }
+        />
 
-          <Route path="industry" element={<IndustryPage />} />
-          <Route path="map" element={<MapPage />} />
-          <Route path="auth" element={<AuthPage />} />
-
-
-          <Route path="*" element={<ErrorFallback/>} />
-        </Route>
-        
-      </Routes>
-    </BrowserRouter>
+        <Route path="*" element={<ErrorFallback />} />
+      </Route>
+    </Routes>
   );
 }
 
@@ -73,7 +108,9 @@ export default function App() {
   return (
     <ErrorBoundary>
       <StateProvider>
-        <AppRouter />
+        <BrowserRouter>
+          <AppRouter />
+        </BrowserRouter>
       </StateProvider>
     </ErrorBoundary>
   );
